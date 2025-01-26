@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>ユーザー別データ推移</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
@@ -110,13 +111,14 @@
         /* グラフコンテナ */
         .chart-container {
             position: relative;
-            height: 70vh;
-            min-height: 600px;
+            height: 35vh;
+            min-height: 300px;
             margin: 20px 0;
             background: white;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             padding: 20px;
+            width: 100%; /* 幅を確実に設定 */
         }
 
         /* スコア表示のスタイル改善 */
@@ -157,6 +159,18 @@
         .score-value.negative {
             color: #ef4444;
         }
+
+        /* スマートフォン向けの調整 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .chart-container {
+                min-height: 400px; /* モバイルでの最小高さを確保 */
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -190,6 +204,7 @@
         let currentView = 'day';
         let myChart = null;
         let allData = {};
+        let chipPurchaseData = {};
 
         function initClient() {
             gapi.client.init({
