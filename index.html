@@ -212,9 +212,9 @@
         let allData = {};
         let chipPurchaseData = {};
 
-        const API_KEY = 'YOUR_API_KEY';
-        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID';
-        const RANGE = 'Sheet1!A:I';
+        const API_KEY = 'AIzaSyAl2CFV1kS96H7BWC4c7qSNoxlgJutO2yo';
+        const SPREADSHEET_ID = '1Y35BApMCv1posrfHAf_KwOYkB47vEFvQMeIaNDcTOic';
+        const RANGE = '購入履歴!A:I';
 
         function groupDataByUnit(data, unit) {
             if (!data || typeof data !== 'object') {
@@ -511,16 +511,13 @@
             allData = {};
             chipPurchaseData = {};
             const users = new Set();
-            const userAccumulated = {};
-            const chipAccumulated = {};
 
-            let validDataCount = 0;
             for (let i = 1; i < values.length; i++) {
                 if (!values[i] || values[i].length < 9) continue;
                 
-                const date = values[i][0];
-                const userId = values[i][5];
-                const chipPurchase = parseFloat(values[i][6]) || 0;
+                const date = values[i][2];
+                const userId = values[i][6];
+                const chipPurchase = parseFloat(values[i][7]) || 0;
                 const score = parseFloat(values[i][8]) || 0;
                 
                 if (!date || !userId || isNaN(new Date(date).getTime())) {
@@ -528,27 +525,23 @@
                     continue;
                 }
 
-                validDataCount++;
                 users.add(userId);
                 
-                if (!userAccumulated[userId]) {
-                    userAccumulated[userId] = 0;
-                    chipAccumulated[userId] = 0;
-                }
-                
-                userAccumulated[userId] += score;
-                chipAccumulated[userId] -= chipPurchase;
-
                 if (!allData[userId]) {
                     allData[userId] = {};
                     chipPurchaseData[userId] = {};
                 }
                 
-                allData[userId][date] = userAccumulated[userId];
-                chipPurchaseData[userId][date] = chipAccumulated[userId];
+                if (!allData[userId][date]) {
+                    allData[userId][date] = 0;
+                    chipPurchaseData[userId][date] = 0;
+                }
+                
+                allData[userId][date] += score;
+                chipPurchaseData[userId][date] -= chipPurchase;
             }
 
-            console.log(`有効なデータ数: ${validDataCount}`);
+            console.log('処理されたユーザー:', Array.from(users));
             createUserSelect(Array.from(users));
         }
 
