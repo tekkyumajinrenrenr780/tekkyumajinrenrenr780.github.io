@@ -7,11 +7,10 @@
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
         .container {
-            width: 90%;
-            margin: 20px auto;
+            width: 95%;
+            margin: 15px auto;
         }
         
-        /* コントロールパネルのスタイル */
         .chart-controls {
             display: flex;
             justify-content: space-between;
@@ -29,10 +28,9 @@
             gap: 12px;
         }
 
-        /* モダンなセレクトボックス */
         .user-select {
             padding: 12px 20px;
-            font-size: 18px;
+            font-size: 32px;
             border: 2px solid #eef2f7;
             border-radius: 12px;
             min-width: 200px;
@@ -48,22 +46,14 @@
             background-color: #ffffff;
         }
 
-        .user-select:focus {
-            outline: none;
-            border-color: #2196F3;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
-        }
-
         .user-select option {
             padding: 12px;
-            font-size: 18px;
-            background-color: #ffffff;
+            font-size: 32px;
         }
 
-        /* クリアボタン */
         .clear-button {
             padding: 12px 20px;
-            font-size: 16px;
+            font-size: 28px;
             color: #2196F3;
             background: #fff;
             border: 2px solid #2196F3;
@@ -78,7 +68,6 @@
             color: #fff;
         }
 
-        /* 期間選択ボタングループ */
         .interval-buttons {
             display: flex;
             background: #f8fafc;
@@ -89,7 +78,7 @@
 
         .interval-button {
             padding: 10px 20px;
-            font-size: 16px;
+            font-size: 28px;
             font-weight: 600;
             border: none;
             background: transparent;
@@ -108,20 +97,6 @@
             color: white;
         }
 
-        /* グラフコンテナ */
-        .chart-container {
-            position: relative;
-            height: 35vh;
-            min-height: 300px;
-            margin: 20px 0;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            padding: 20px;
-            width: 100%; /* 幅を確実に設定 */
-        }
-
-        /* スコア表示のスタイル改善 */
         .score-display {
             display: flex;
             flex-wrap: wrap;
@@ -139,15 +114,10 @@
             padding: 15px 25px;
             background: #f8fafc;
             border-radius: 12px;
-            font-size: 20px;
+            font-size: 32px;
             font-weight: 600;
             color: #1a1f36;
             transition: all 0.2s ease;
-        }
-
-        .score-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .score-value {
@@ -160,15 +130,30 @@
             color: #ef4444;
         }
 
-        /* スマートフォン向けの調整 */
+        .chart-container {
+            position: relative;
+            height: 35vh;
+            min-height: 300px;
+            margin: 20px 0;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 20px;
+        }
+
         @media (max-width: 768px) {
-            .container {
-                padding: 10px;
+            .chart-controls {
+                flex-direction: column;
+                gap: 20px;
             }
-            
-            .chart-container {
-                min-height: 400px; /* モバイルでの最小高さを確保 */
-                padding: 10px;
+
+            .select-container {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .user-select {
+                width: 100%;
             }
         }
     </style>
@@ -188,78 +173,356 @@
                 <button class="interval-button" onclick="changeView('month')">1M</button>
             </div>
         </div>
-        <div id="score-display" class="score-display">
-            <!-- スコア表示はJavaScriptで動的に追加 -->
-        </div>
+        <div id="score-display" class="score-display"></div>
         <div class="chart-container">
             <canvas id="myChart"></canvas>
         </div>
-        <div id="error-message" style="color: red;"></div>
     </div>
 
     <script>
-        const API_KEY = 'AIzaSyAl2CFV1kS96H7BWC4c7qSNoxlgJutO2yo';
-        const SPREADSHEET_ID = '1Y35BApMCv1posrfHAf_KwOYkB47vEFvQMeIaNDcTOic';
-        const RANGE = '購入履歴!A:I';
-        let currentView = 'day';
         let myChart = null;
+        let currentView = 'day';
         let allData = {};
         let chipPurchaseData = {};
 
-        function initClient() {
-            gapi.client.init({
-                apiKey: API_KEY,
-                discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
-            }).then(function() {
-                return loadData();
-            }).catch(function(error) {
-                console.error('初期化エラー:', error);
+        const API_KEY = 'YOUR_API_KEY';
+        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID';
+        const RANGE = 'Sheet1!A:I';
+
+        function groupDataByUnit(data, unit) {
+            if (!data || typeof data !== 'object') {
+                console.warn('データが不正です:', data);
+                return {};
+            }
+
+            const grouped = {};
+            try {
+                const entries = Object.entries(data)
+                    .filter(([date]) => date && date.trim())
+                    .sort(([a], [b]) => new Date(a) - new Date(b));
+                
+                entries.forEach(([date, value]) => {
+                    let groupKey;
+                    const dateObj = new Date(date);
+                    
+                    if (isNaN(dateObj.getTime())) {
+                        console.warn('不正な日付形式:', date);
+                        return;
+                    }
+                    
+                    switch(unit) {
+                        case 'day':
+                            groupKey = date;
+                            break;
+                        case 'week':
+                            const weekStart = new Date(dateObj);
+                            weekStart.setDate(dateObj.getDate() - dateObj.getDay());
+                            groupKey = weekStart.toISOString().split('T')[0];
+                            break;
+                        case 'month':
+                            groupKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-01`;
+                            break;
+                        default:
+                            groupKey = date;
+                    }
+                    
+                    grouped[groupKey] = value;
+                });
+            } catch (error) {
+                console.error('データのグループ化でエラー:', error);
+                return {};
+            }
+            
+            return grouped;
+        }
+
+        function updateScoreDisplay() {
+            const select = document.getElementById('user-select');
+            const selectedUsers = Array.from(select.selectedOptions)
+                .map(option => option.value)
+                .filter(value => value !== '');
+
+            const scoreDisplay = document.getElementById('score-display');
+            scoreDisplay.innerHTML = '';
+
+            selectedUsers.forEach(userId => {
+                const userData = allData[userId];
+                if (!userData) return;
+
+                const dates = Object.keys(userData).sort();
+                const latestScore = userData[dates[dates.length - 1]];
+                const chipData = chipPurchaseData[userId];
+                const latestChip = chipData ? chipData[dates[dates.length - 1]] : 0;
+
+                const scoreItem = document.createElement('div');
+                scoreItem.className = 'score-item';
+                
+                const formattedScore = new Intl.NumberFormat('ja-JP').format(
+                    Math.round(latestScore)
+                );
+                const formattedChip = new Intl.NumberFormat('ja-JP').format(
+                    Math.abs(Math.round(latestChip))
+                );
+                
+                scoreItem.innerHTML = `
+                    ${userId}:
+                    <span class="score-value">
+                        ${formattedScore}
+                    </span>
+                    <span class="score-value negative">
+                        -${formattedChip}
+                    </span>
+                `;
+                scoreDisplay.appendChild(scoreItem);
             });
         }
 
-        function loadData() {
-            return gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: RANGE
-            }).then(function(response) {
-                processData(response.result.values);
-            }).catch(function(error) {
-                console.error('データ取得エラー:', error);
+        function updateChart() {
+            const select = document.getElementById('user-select');
+            const selectedUsers = Array.from(select.selectedOptions)
+                .map(option => option.value)
+                .filter(value => value !== '');
+
+            if (selectedUsers.length === 0) {
+                if (myChart) {
+                    myChart.destroy();
+                    myChart = null;
+                }
+                return;
+            }
+
+            const validUsers = selectedUsers.filter(userId => {
+                if (!allData[userId] || Object.keys(allData[userId]).length === 0) {
+                    console.warn(`ユーザー ${userId} のデータが見つかりません`);
+                    return false;
+                }
+                return true;
+            });
+
+            if (validUsers.length === 0) {
+                console.warn('表示可能なデータがありません');
+                return;
+            }
+
+            const datasets = validUsers.map((userId, index) => {
+                const colors = [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(153, 102, 255, 1)',
+                ];
+
+                const userData = allData[userId];
+                const groupedData = groupDataByUnit(userData, currentView);
+                const dates = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
+                
+                return {
+                    label: `スコア ${userId}`,
+                    data: dates.map(date => groupedData[date]),
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length].replace('1)', '0.2)'),
+                    tension: 0.3,
+                    fill: true,
+                    order: 1
+                };
+            });
+
+            const chipDatasets = validUsers.map((userId, index) => {
+                const colors = [
+                    'rgba(231, 76, 60, 1)',
+                    'rgba(52, 152, 219, 1)',
+                    'rgba(46, 204, 113, 1)',
+                    'rgba(241, 196, 15, 1)',
+                    'rgba(155, 89, 182, 1)',
+                ];
+
+                const chipData = chipPurchaseData[userId];
+                const groupedChipData = groupDataByUnit(chipData, currentView);
+                const dates = Object.keys(groupedChipData).sort((a, b) => new Date(a) - new Date(b));
+                
+                return {
+                    label: `チップ購入 ${userId}`,
+                    data: dates.map(date => groupedChipData[date]),
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length].replace('1)', '0.1)'),
+                    tension: 0.3,
+                    fill: true,
+                    order: 2,
+                    borderDash: [5, 5]
+                };
+            });
+
+            const allDates = validUsers.length > 0 ? 
+                Object.keys(groupDataByUnit(allData[validUsers[0]], currentView)).sort((a, b) => new Date(a) - new Date(b)) : [];
+
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            const ctx = document.getElementById('myChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allDates,
+                    datasets: [...datasets, ...chipDatasets]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '累積スコアとチップ購入推移',
+                            font: {
+                                size: 36,
+                                weight: 'bold'
+                            },
+                            padding: {
+                                top: 20,
+                                bottom: 20
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 28
+                                },
+                                padding: 25,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1a1f36',
+                            bodyColor: '#1a1f36',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 2,
+                            padding: 20,
+                            bodySpacing: 12,
+                            bodyFont: {
+                                size: 28
+                            },
+                            titleFont: {
+                                size: 32,
+                                weight: 'bold'
+                            },
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const date = new Date(tooltipItems[0].label);
+                                    return date.toLocaleDateString('ja-JP', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                    });
+                                },
+                                label: function(context) {
+                                    const userId = context.dataset.label.split(' ')[1];
+                                    const value = context.raw;
+                                    const formattedValue = new Intl.NumberFormat('ja-JP').format(Math.abs(Math.round(value)));
+                                    
+                                    if (context.dataset.label.startsWith('スコア')) {
+                                        return `${userId} Total: ${formattedValue}`;
+                                    } else {
+                                        return `${userId} 購入累計: ${formattedValue}`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: {
+                                    size: 24
+                                },
+                                padding: 15,
+                                callback: function(value) {
+                                    if (Math.abs(value) >= 1000000) {
+                                        return (value / 1000000).toFixed(1) + 'M';
+                                    } else if (Math.abs(value) >= 1000) {
+                                        return (value / 1000).toFixed(1) + 'k';
+                                    }
+                                    return value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 6,
+                                font: {
+                                    size: 24
+                                },
+                                padding: 15
+                            }
+                        }
+                    }
+                }
             });
         }
 
         function processData(values) {
-            if (!values || values.length === 0) return;
+            if (!values || values.length === 0) {
+                console.error('データが空です');
+                return;
+            }
+
+            console.log('データ処理開始:', values.length);
 
             allData = {};
+            chipPurchaseData = {};
             const users = new Set();
             const userAccumulated = {};
+            const chipAccumulated = {};
 
+            let validDataCount = 0;
             for (let i = 1; i < values.length; i++) {
                 if (!values[i] || values[i].length < 9) continue;
                 
                 const date = values[i][0];
                 const userId = values[i][5];
+                const chipPurchase = parseFloat(values[i][6]) || 0;
                 const score = parseFloat(values[i][8]) || 0;
                 
-                if (!date || !userId) continue;
+                if (!date || !userId || isNaN(new Date(date).getTime())) {
+                    console.warn(`行 ${i} のデータが不正です:`, values[i]);
+                    continue;
+                }
 
+                validDataCount++;
                 users.add(userId);
                 
                 if (!userAccumulated[userId]) {
                     userAccumulated[userId] = 0;
+                    chipAccumulated[userId] = 0;
                 }
                 
                 userAccumulated[userId] += score;
+                chipAccumulated[userId] -= chipPurchase;
 
                 if (!allData[userId]) {
                     allData[userId] = {};
+                    chipPurchaseData[userId] = {};
                 }
+                
                 allData[userId][date] = userAccumulated[userId];
+                chipPurchaseData[userId][date] = chipAccumulated[userId];
             }
 
+            console.log(`有効なデータ数: ${validDataCount}`);
             createUserSelect(Array.from(users));
-            updateChart();
         }
 
         function createUserSelect(users) {
@@ -277,236 +540,56 @@
                 updateChart();
                 updateScoreDisplay();
             });
-            
-            // 初期状態では何も選択しない
-            Array.from(select.options).forEach(option => {
-                option.selected = false;
-            });
-            updateScoreDisplay();
-        }
 
-        function formatDate(dateStr, view) {
-            const date = new Date(dateStr);
-            
-            switch(view) {
-                case 'day':
-                    return `${date.getMonth() + 1}/${date.getDate()}`; // 例: "10/25"
-                case 'week':
-                    return `${date.getMonth() + 1}/${date.getDate()}`; // 週の開始日
-                case 'month':
-                    return `${date.getMonth() + 1}月`; // 例: "10月"
-                default:
-                    return dateStr;
-            }
-        }
-
-        function groupDataByUnit(data, unit) {
-            const grouped = {};
-            const entries = Object.entries(data)
-                .sort(([a], [b]) => new Date(a) - new Date(b));
-            
-            entries.forEach(([date, value]) => {
-                let groupKey;
-                const dateObj = new Date(date);
-                
-                switch(unit) {
-                    case 'day':
-                        groupKey = date;
-                        break;
-                    case 'week':
-                        const weekStart = new Date(dateObj);
-                        weekStart.setDate(dateObj.getDate() - dateObj.getDay());
-                        groupKey = weekStart.toISOString().split('T')[0];
-                        break;
-                    case 'month':
-                        groupKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-01`;
-                        break;
-                }
-                
-                grouped[groupKey] = value;
+            document.getElementById('clear-select').addEventListener('click', function() {
+                Array.from(select.options).forEach(option => {
+                    option.selected = false;
+                });
+                updateChart();
+                updateScoreDisplay();
             });
-            
-            return grouped;
         }
 
         function changeView(view) {
             currentView = view;
+            
             document.querySelectorAll('.interval-button').forEach(button => {
                 button.classList.remove('active');
             });
-            document.querySelector(`[onclick="changeView('${view}')"]`).classList.add('active');
-            updateChart();
+            event.target.classList.add('active');
+
+            const select = document.getElementById('user-select');
+            if (Array.from(select.selectedOptions).length > 0) {
+                updateChart();
+            }
         }
 
-        function updateChart() {
-            const select = document.getElementById('user-select');
-            const selectedUsers = Array.from(select.selectedOptions)
-                .map(option => option.value)
-                .filter(value => value !== '');
-
-            if (selectedUsers.length === 0) {
-                if (myChart) {
-                    myChart.destroy();
-                    myChart = null;
-                }
-                return;
-            }
-
-            // スコアのデータセット
-            const datasets = selectedUsers.map((userId, index) => {
-                const colors = [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(153, 102, 255, 1)',
-                ];
-
-                const userData = allData[userId];
-                const groupedData = groupDataByUnit(userData, currentView);
-                // 日付を昇順（古い順）にソート
-                const dates = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
-                
-                return {
-                    label: `スコア ${userId}`,
-                    data: dates.map(date => groupedData[date]),
-                    borderColor: colors[index % colors.length],
-                    backgroundColor: colors[index % colors.length].replace('1)', '0.2)'),
-                    tension: 0.3,
-                    fill: true,
-                    order: 1
-                };
+        function initClient() {
+            gapi.client.init({
+                apiKey: API_KEY,
+                discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+            }).then(() => {
+                loadData();
+            }).catch(error => {
+                console.error('API初期化エラー:', error);
             });
+        }
 
-            // チップ購入のデータセット
-            const chipDatasets = selectedUsers.map((userId, index) => {
-                const colors = [
-                    'rgba(231, 76, 60, 1)',
-                    'rgba(52, 152, 219, 1)',
-                    'rgba(46, 204, 113, 1)',
-                    'rgba(241, 196, 15, 1)',
-                    'rgba(155, 89, 182, 1)',
-                ];
-
-                const chipData = chipPurchaseData[userId];
-                const groupedChipData = groupDataByUnit(chipData, currentView);
-                // 日付を昇順（古い順）にソート
-                const dates = Object.keys(groupedChipData).sort((a, b) => new Date(a) - new Date(b));
-                
-                return {
-                    label: `チップ購入 ${userId}`,
-                    data: dates.map(date => groupedChipData[date]),
-                    borderColor: colors[index % colors.length],
-                    backgroundColor: colors[index % colors.length].replace('1)', '0.1)'),
-                    tension: 0.3,
-                    fill: true,
-                    order: 2,
-                    borderDash: [5, 5]
-                };
-            });
-
-            // 全ての日付を取得して昇順にソート
-            const allDates = selectedUsers.length > 0 ? 
-                Object.keys(groupDataByUnit(allData[selectedUsers[0]], currentView))
-                    .sort((a, b) => new Date(a) - new Date(b)) : [];
-
-            if (myChart) {
-                myChart.destroy();
-            }
-
-            const ctx = document.getElementById('myChart').getContext('2d');
-            myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: allDates,
-                    datasets: [...datasets, ...chipDatasets]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: '累積スコア推移',
-                            font: {
-                                size: 20,
-                                weight: 'bold'
-                            }
-                        },
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                font: {
-                                    size: 16
-                                },
-                                padding: 20
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                font: {
-                                    size: 14
-                                },
-                                callback: function(value) {
-                                    // 大きな数値を省略表示（例: 1000 → 1k）
-                                    if (value >= 1000000) {
-                                        return (value / 1000000).toFixed(1) + 'M';
-                                    } else if (value >= 1000) {
-                                        return (value / 1000).toFixed(1) + 'k';
-                                    }
-                                    return value;
-                                }
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false // グリッド線を非表示
-                            },
-                            ticks: {
-                                maxRotation: 0, // 回転をなくす
-                                autoSkip: true, // 自動的に間引く
-                                maxTicksLimit: 8, // 表示する最大数
-                                font: {
-                                    size: 14
-                                },
-                                callback: function(val, index) {
-                                    // ラベルのフォーマット
-                                    return formatDate(this.getLabelForValue(val), currentView);
-                                }
-                            }
-                        }
-                    },
-                    layout: {
-                        padding: {
-                            left: 15,
-                            right: 15,
-                            top: 20,
-                            bottom: 10
-                        }
-                    }
-                }
+        function loadData() {
+            gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: RANGE
+            }).then(response => {
+                console.log('データ読み込み成功');
+                processData(response.result.values);
+            }).catch(error => {
+                console.error('データ読み込みエラー:', error);
             });
         }
 
         window.onload = function() {
             gapi.load('client', initClient);
         };
-
-        document.getElementById('clear-select').addEventListener('click', function() {
-            const select = document.getElementById('user-select');
-            Array.from(select.options).forEach(option => {
-                option.selected = false;
-            });
-            updateChart();
-            updateScoreDisplay();
-        });
-
-        function updateScoreDisplay() {
-            // 実装が必要
-        }
     </script>
 </body>
-</html> 
+</html>
