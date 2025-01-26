@@ -15,57 +15,96 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
-            background: #f5f5f5;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             margin-bottom: 20px;
+        }
+
+        .select-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         /* ユーザー選択のスタイル */
         .user-select {
-            padding: 8px;
-            font-size: 14px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 12px 20px;
+            font-size: 18px;
+            border: 2px solid #eef2f7;
+            border-radius: 12px;
             min-width: 200px;
+            background-color: #f8fafc;
+            color: #1a1f36;
+            appearance: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-select:hover {
+            border-color: #2196F3;
+            background-color: #ffffff;
+        }
+
+        .user-select:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        .user-select option {
+            padding: 12px;
+            font-size: 18px;
+            background-color: #ffffff;
+        }
+
+        /* クリアボタン */
+        .clear-button {
+            padding: 12px 20px;
+            font-size: 16px;
+            color: #2196F3;
+            background: #fff;
+            border: 2px solid #2196F3;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .clear-button:hover {
+            background: #2196F3;
+            color: #fff;
         }
 
         /* 期間選択ボタンのスタイル */
         .interval-buttons {
             display: flex;
-            gap: 2px;
+            background: #f8fafc;
+            padding: 4px;
+            border-radius: 12px;
+            gap: 4px;
         }
 
         .interval-button {
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: bold;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: 600;
             border: none;
-            background: #f8f9fa;
+            background: transparent;
+            color: #64748b;
             cursor: pointer;
-            transition: all 0.2s;
+            border-radius: 10px;
+            transition: all 0.2s ease;
         }
 
-        .interval-button:first-child {
-            border-radius: 4px 0 0 4px;
-        }
-
-        .interval-button:last-child {
-            border-radius: 0 4px 4px 0;
+        .interval-button:hover {
+            color: #2196F3;
         }
 
         .interval-button.active {
             background: #2196F3;
             color: white;
-        }
-
-        .interval-button:hover {
-            background: #e9ecef;
-        }
-
-        .interval-button.active:hover {
-            background: #1976D2;
         }
 
         /* グラフコンテナ */
@@ -79,19 +118,64 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             padding: 20px;
         }
+
+        /* スコア表示のスタイル改善 */
+        .score-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 15px 0;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .score-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 25px;
+            background: #f8fafc;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1f36;
+            transition: all 0.2s ease;
+        }
+
+        .score-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .score-value {
+            color: #2196F3;
+            margin-left: 12px;
+            font-weight: 700;
+        }
+
+        .score-value.negative {
+            color: #ef4444;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="chart-controls">
-            <select id="user-select" class="user-select" multiple>
-                <!-- ユーザーオプションはJavaScriptで動的に追加 -->
-            </select>
+            <div class="select-container">
+                <select id="user-select" class="user-select" multiple>
+                    <!-- ユーザーオプションはJavaScriptで動的に追加 -->
+                </select>
+                <button id="clear-select" class="clear-button">全解除</button>
+            </div>
             <div class="interval-buttons">
                 <button class="interval-button active" onclick="changeView('day')">1D</button>
                 <button class="interval-button" onclick="changeView('week')">1W</button>
                 <button class="interval-button" onclick="changeView('month')">1M</button>
             </div>
+        </div>
+        <div id="score-display" class="score-display">
+            <!-- スコア表示はJavaScriptで動的に追加 -->
         </div>
         <div class="chart-container">
             <canvas id="myChart"></canvas>
@@ -170,12 +254,20 @@
             users.sort().forEach(userId => {
                 const option = document.createElement('option');
                 option.value = userId;
-                option.text = `ユーザー ${userId}`;
+                option.text = userId;
                 select.appendChild(option);
             });
 
-            select.addEventListener('change', updateChart);
-            Array.from(select.options).forEach(option => option.selected = true);
+            select.addEventListener('change', () => {
+                updateChart();
+                updateScoreDisplay();
+            });
+            
+            // 初期状態では何も選択しない
+            Array.from(select.options).forEach(option => {
+                option.selected = false;
+            });
+            updateScoreDisplay();
         }
 
         function formatDate(dateStr, view) {
@@ -352,6 +444,19 @@
         window.onload = function() {
             gapi.load('client', initClient);
         };
+
+        document.getElementById('clear-select').addEventListener('click', function() {
+            const select = document.getElementById('user-select');
+            Array.from(select.options).forEach(option => {
+                option.selected = false;
+            });
+            updateChart();
+            updateScoreDisplay();
+        });
+
+        function updateScoreDisplay() {
+            // 実装が必要
+        }
     </script>
 </body>
 </html> 
