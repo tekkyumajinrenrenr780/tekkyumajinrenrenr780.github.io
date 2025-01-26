@@ -178,6 +178,21 @@
             Array.from(select.options).forEach(option => option.selected = true);
         }
 
+        function formatDate(dateStr, view) {
+            const date = new Date(dateStr);
+            
+            switch(view) {
+                case 'day':
+                    return `${date.getMonth() + 1}/${date.getDate()}`; // 例: "10/25"
+                case 'week':
+                    return `${date.getMonth() + 1}/${date.getDate()}`; // 週の開始日
+                case 'month':
+                    return `${date.getMonth() + 1}月`; // 例: "10月"
+                default:
+                    return dateStr;
+            }
+        }
+
         function groupDataByUnit(data, unit) {
             const grouped = {};
             const entries = Object.entries(data).sort(([a], [b]) => new Date(a) - new Date(b));
@@ -188,7 +203,7 @@
                 
                 switch(unit) {
                     case 'day':
-                        groupKey = date;
+                        groupKey = date; // そのまま使用
                         break;
                     case 'week':
                         const weekStart = new Date(dateObj);
@@ -196,7 +211,7 @@
                         groupKey = weekStart.toISOString().split('T')[0];
                         break;
                     case 'month':
-                        groupKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+                        groupKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-01`;
                         break;
                 }
                 
@@ -270,19 +285,64 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: 'ユーザー別累積スコア推移',
+                            text: '累積スコア推移',
                             font: {
-                                size: 18,
+                                size: 20,
                                 weight: 'bold'
                             }
                         },
                         legend: {
-                            position: 'top'
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 16
+                                },
+                                padding: 20
+                            }
                         }
                     },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                font: {
+                                    size: 14
+                                },
+                                callback: function(value) {
+                                    // 大きな数値を省略表示（例: 1000 → 1k）
+                                    if (value >= 1000000) {
+                                        return (value / 1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return (value / 1000).toFixed(1) + 'k';
+                                    }
+                                    return value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false // グリッド線を非表示
+                            },
+                            ticks: {
+                                maxRotation: 0, // 回転をなくす
+                                autoSkip: true, // 自動的に間引く
+                                maxTicksLimit: 8, // 表示する最大数
+                                font: {
+                                    size: 14
+                                },
+                                callback: function(val, index) {
+                                    // ラベルのフォーマット
+                                    return formatDate(this.getLabelForValue(val), currentView);
+                                }
+                            }
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            left: 15,
+                            right: 15,
+                            top: 20,
+                            bottom: 10
                         }
                     }
                 }
