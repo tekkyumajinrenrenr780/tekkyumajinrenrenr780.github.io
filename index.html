@@ -28,7 +28,7 @@
             gap: 12px;
         }
 
-        /* ユーザー選択のスタイル */
+        /* モダンなセレクトボックス */
         .user-select {
             padding: 12px 20px;
             font-size: 18px;
@@ -77,7 +77,7 @@
             color: #fff;
         }
 
-        /* 期間選択ボタンのスタイル */
+        /* 期間選択ボタングループ */
         .interval-buttons {
             display: flex;
             background: #f8fafc;
@@ -287,7 +287,8 @@
 
         function groupDataByUnit(data, unit) {
             const grouped = {};
-            const entries = Object.entries(data).sort(([a], [b]) => new Date(a) - new Date(b));
+            const entries = Object.entries(data)
+                .sort(([a], [b]) => new Date(a) - new Date(b));
             
             entries.forEach(([date, value]) => {
                 let groupKey;
@@ -295,7 +296,7 @@
                 
                 switch(unit) {
                     case 'day':
-                        groupKey = date; // そのまま使用
+                        groupKey = date;
                         break;
                     case 'week':
                         const weekStart = new Date(dateObj);
@@ -324,7 +325,9 @@
 
         function updateChart() {
             const select = document.getElementById('user-select');
-            const selectedUsers = Array.from(select.selectedOptions).map(option => option.value);
+            const selectedUsers = Array.from(select.selectedOptions)
+                .map(option => option.value)
+                .filter(value => value !== '');
 
             if (selectedUsers.length === 0) {
                 if (myChart) {
@@ -334,6 +337,7 @@
                 return;
             }
 
+            // スコアのデータセット
             const datasets = selectedUsers.map((userId, index) => {
                 const colors = [
                     'rgba(255, 99, 132, 1)',
@@ -345,20 +349,51 @@
 
                 const userData = allData[userId];
                 const groupedData = groupDataByUnit(userData, currentView);
-                const dates = Object.keys(groupedData).sort();
+                // 日付を昇順（古い順）にソート
+                const dates = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
                 
                 return {
-                    label: `ユーザー ${userId}`,
+                    label: `スコア ${userId}`,
                     data: dates.map(date => groupedData[date]),
                     borderColor: colors[index % colors.length],
                     backgroundColor: colors[index % colors.length].replace('1)', '0.2)'),
                     tension: 0.3,
-                    fill: true
+                    fill: true,
+                    order: 1
                 };
             });
 
+            // チップ購入のデータセット
+            const chipDatasets = selectedUsers.map((userId, index) => {
+                const colors = [
+                    'rgba(231, 76, 60, 1)',
+                    'rgba(52, 152, 219, 1)',
+                    'rgba(46, 204, 113, 1)',
+                    'rgba(241, 196, 15, 1)',
+                    'rgba(155, 89, 182, 1)',
+                ];
+
+                const chipData = chipPurchaseData[userId];
+                const groupedChipData = groupDataByUnit(chipData, currentView);
+                // 日付を昇順（古い順）にソート
+                const dates = Object.keys(groupedChipData).sort((a, b) => new Date(a) - new Date(b));
+                
+                return {
+                    label: `チップ購入 ${userId}`,
+                    data: dates.map(date => groupedChipData[date]),
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length].replace('1)', '0.1)'),
+                    tension: 0.3,
+                    fill: true,
+                    order: 2,
+                    borderDash: [5, 5]
+                };
+            });
+
+            // 全ての日付を取得して昇順にソート
             const allDates = selectedUsers.length > 0 ? 
-                Object.keys(groupDataByUnit(allData[selectedUsers[0]], currentView)).sort() : [];
+                Object.keys(groupDataByUnit(allData[selectedUsers[0]], currentView))
+                    .sort((a, b) => new Date(a) - new Date(b)) : [];
 
             if (myChart) {
                 myChart.destroy();
@@ -369,7 +404,7 @@
                 type: 'line',
                 data: {
                     labels: allDates,
-                    datasets: datasets
+                    datasets: [...datasets, ...chipDatasets]
                 },
                 options: {
                     responsive: true,
