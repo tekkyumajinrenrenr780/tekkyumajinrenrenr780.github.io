@@ -515,10 +515,10 @@
             for (let i = 1; i < values.length; i++) {
                 if (!values[i] || values[i].length < 9) continue;
                 
-                const date = values[i][2];
-                const userId = values[i][6];
-                const chipPurchase = parseFloat(values[i][7]) || 0;
-                const score = parseFloat(values[i][8]) || 0;
+                const date = values[i][2];         // C列: DATE from Sheets
+                const userId = values[i][6];       // G列: USER ID
+                const chipPurchase = parseFloat(values[i][7]) || 0;  // H列: 購入
+                const score = parseFloat(values[i][8]) || 0;         // I列: チップ増減
                 
                 if (!date || !userId || isNaN(new Date(date).getTime())) {
                     console.warn(`行 ${i} のデータが不正です:`, values[i]);
@@ -532,6 +532,7 @@
                     chipPurchaseData[userId] = {};
                 }
                 
+                // 日付ごとの累積を計算
                 if (!allData[userId][date]) {
                     allData[userId][date] = 0;
                     chipPurchaseData[userId][date] = 0;
