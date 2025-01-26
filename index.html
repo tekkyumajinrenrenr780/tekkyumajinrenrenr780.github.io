@@ -74,6 +74,10 @@
             height: 70vh;
             min-height: 600px;
             margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
         }
     </style>
 </head>
@@ -103,12 +107,62 @@
         let myChart = null;
         let allData = {};
 
-        // ユーザー選択の変更を処理
-        function handleUserSelection() {
+        function initClient() {
+            gapi.client.init({
+                apiKey: API_KEY,
+                discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+            }).then(function() {
+                return loadData();
+            }).catch(function(error) {
+                console.error('初期化エラー:', error);
+            });
+        }
+
+        function loadData() {
+            return gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: RANGE
+            }).then(function(response) {
+                processData(response.result.values);
+            }).catch(function(error) {
+                console.error('データ取得エラー:', error);
+            });
+        }
+
+        function processData(values) {
+            if (!values || values.length === 0) return;
+
+            allData = {};
+            const users = new Set();
+            const userAccumulated = {};
+
+            for (let i = 1; i < values.length; i++) {
+                if (!values[i] || values[i].length < 9) continue;
+                
+                const date = values[i][0];
+                const userId = values[i][5];
+                const score = parseFloat(values[i][8]) || 0;
+                
+                if (!date || !userId) continue;
+
+                users.add(userId);
+                
+                if (!userAccumulated[userId]) {
+                    userAccumulated[userId] = 0;
+                }
+                
+                userAccumulated[userId] += score;
+
+                if (!allData[userId]) {
+                    allData[userId] = {};
+                }
+                allData[userId][date] = userAccumulated[userId];
+            }
+
+            createUserSelect(Array.from(users));
             updateChart();
         }
 
-        // ユーザーリストの作成関数を修正
         function createUserSelect(users) {
             const select = document.getElementById('user-select');
             select.innerHTML = '';
@@ -120,27 +174,47 @@
                 select.appendChild(option);
             });
 
-            // 選択変更イベントの追加
-            select.addEventListener('change', handleUserSelection);
-
-            // 初期状態で全て選択
+            select.addEventListener('change', updateChart);
             Array.from(select.options).forEach(option => option.selected = true);
         }
 
-        // 表示期間の変更
+        function groupDataByUnit(data, unit) {
+            const grouped = {};
+            const entries = Object.entries(data).sort(([a], [b]) => new Date(a) - new Date(b));
+            
+            entries.forEach(([date, value]) => {
+                let groupKey;
+                const dateObj = new Date(date);
+                
+                switch(unit) {
+                    case 'day':
+                        groupKey = date;
+                        break;
+                    case 'week':
+                        const weekStart = new Date(dateObj);
+                        weekStart.setDate(dateObj.getDate() - dateObj.getDay());
+                        groupKey = weekStart.toISOString().split('T')[0];
+                        break;
+                    case 'month':
+                        groupKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+                        break;
+                }
+                
+                grouped[groupKey] = value;
+            });
+            
+            return grouped;
+        }
+
         function changeView(view) {
             currentView = view;
-            
-            // ボタンのアクティブ状態を更新
             document.querySelectorAll('.interval-button').forEach(button => {
                 button.classList.remove('active');
             });
             document.querySelector(`[onclick="changeView('${view}')"]`).classList.add('active');
-            
             updateChart();
         }
 
-        // updateChart関数を修正
         function updateChart() {
             const select = document.getElementById('user-select');
             const selectedUsers = Array.from(select.selectedOptions).map(option => option.value);
@@ -196,121 +270,28 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: `ユーザー別累積スコア推移`,
+                            text: 'ユーザー別累積スコア推移',
                             font: {
                                 size: 18,
                                 weight: 'bold'
-                            },
-                            padding: {
-                                top: 10,
-                                bottom: 30
                             }
                         },
                         legend: {
-                            position: 'top',
-                            labels: {
-                                padding: 20,
-                                font: {
-                                    size: 14
-                                },
-                                boxWidth: 40
-                            }
+                            position: 'top'
                         }
                     },
                     scales: {
                         y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '累積スコア',
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
-                                },
-                                padding: {
-                                    bottom: 10
-                                }
-                            },
-                            ticks: {
-                                font: {
-                                    size: 12
-                                },
-                                padding: 8
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: '日付',
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
-                                },
-                                padding: {
-                                    top: 20
-                                }
-                            },
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 45,
-                                font: {
-                                    size: 12
-                                },
-                                padding: 8
-                            }
-                        }
-                    },
-                    layout: {
-                        padding: {
-                            left: 15,
-                            right: 15,
-                            top: 20,
-                            bottom: 25
+                            beginAtZero: true
                         }
                     }
                 }
             });
         }
 
-        // processData関数を修正
-        function processData(values) {
-            if (!values || values.length === 0) {
-                console.error('データが空です');
-                return;
-            }
-
-            allData = {};
-            const users = new Set();
-            const userAccumulated = {};
-
-            for (let i = 1; i < values.length; i++) {
-                if (!values[i] || values[i].length < 9) continue;
-                
-                const date = values[i][0];     // A列: 日付
-                const userId = values[i][5];    // F列: USER ID
-                const score = parseFloat(values[i][8]) || 0;  // I列: TOTALスコア
-                
-                if (!date || !userId) continue;
-
-                users.add(userId);
-                
-                if (!userAccumulated[userId]) {
-                    userAccumulated[userId] = 0;
-                }
-                
-                userAccumulated[userId] += score;
-
-                if (!allData[userId]) {
-                    allData[userId] = {};
-                }
-                allData[userId][date] = userAccumulated[userId];
-            }
-
-            createUserSelect(Array.from(users));
-            updateChart();
-        }
-
-        // 残りの関数は同じ...
+        window.onload = function() {
+            gapi.load('client', initClient);
+        };
     </script>
 </body>
 </html> 
