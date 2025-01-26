@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ユーザー別データ推移</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <style>
+        .container {
+            width: 80%;
+            margin: 20px auto;
+        }
+        .user-selector {
+            margin: 20px 0;
+        }
+        .checkbox-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="user-selector">
+            <h3>表示するユーザーを選択:</h3>
+            <div id="checkbox-container" class="checkbox-container"></div>
+        </div>
+        <canvas id="myChart"></canvas>
+        <div id="error-message" style="color: red;"></div>
+    </div>
+
+    <script>
+        // ここに新しいAPIキーを設定
+        const API_KEY = 'AIzaSyAl2CFV1kS96H7BWC4c7qSNoxlgJutO2yo';
+        const SPREADSHEET_ID = '1Y35BApMCv1posrfHAf_KwOYkB47vEFvQMeIaNDcTOic';
+        const RANGE = '購入履歴!A:I';
+
+        let myChart = null;
+        let allData = {};
+
+        function initClient() {
+            console.log('Initializing client...'); // デバッグ用
+            return gapi.client.init({
+                apiKey: API_KEY,
+                discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+            }).then(function() {
+                console.log('Client initialized'); // デバッグ用
+                return loadData();
+            }).catch(function(error) {
+                console.error('初期化エラーの詳細:', error); // デバッグ用
+                document.getElementById('error-message').textContent = 
+                    'APIの初期化に失敗しました: ' + (error.message || error.details || '不明なエラー');
+            });
+        }
+
+        function loadData() {
+            gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: RANGE,
+            }).then(function(response) {
+                const values = response.result.values;
+                if (values && values.length > 0) {
+                    processData(values);
+                } else {
+                    document.getElementById('error-message').textContent = 
+                        'データが見つかりませんでした。';
+                }
+            }).catch(function(error) {
+                console.error('データ取得エラー:', error);
+                document.getElementById('error-message').textContent = 
+                    'データの取得に失敗しました: ' + error.result.error.message;
+            });
+        }
+
+        function processData(values) {
+            allData = {};
+            const users = new Set();
+
+            // ヘッダーをスキップしてデータを処理
+            for (let i = 1; i < values.length; i++) {
+                if (values[i].length < 3) continue;
+                
+                const [date, userId, value] = values[i];
+                if (!date || !userId || !value) continue;
+
+                users.add(userId);
+                
+                if (!allData[userId]) {
+                    allData[userId] = {};
+                }
+                if (!allData[userId][date]) {
+                    allData[userId][date] = 0;
+                }
+                allData[userId][date] += parseFloat(value) || 0;
+            }
+
+            createUserCheckboxes(Array.from(users));
+            updateChart();
+        }
+
+        function createUserCheckboxes(users) {
+            const container = document.getElementById('checkbox-container');
+            container.innerHTML = '';
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p>ユーザーデータが見つかりません</p>';
+                return;
+            }
+
+            users.forEach(userId => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label>
+                        <input type="checkbox" value="${userId}" onchange="updateChart()">
+                        ${userId}
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateChart() {
+            const selectedUsers = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(cb => cb.value);
+
+            if (selectedUsers.length === 0) {
+                if (myChart) {
+                    myChart.destroy();
+                    myChart = null;
+                }
+                return;
+            }
+
+            const datasets = selectedUsers.map((userId, index) => {
+                const colors = [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(153, 102, 255, 1)',
+                ];
+
+                const userData = allData[userId];
+                const dates = Object.keys(userData).sort();
+                
+                return {
+                    label: `ユーザー ${userId}`,
+                    data: dates.map(date => userData[date]),
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length].replace('1)', '0.2)'),
+                    tension: 0.3,
+                    fill: true
+                };
+            });
+
+            const dates = selectedUsers.length > 0 ? 
+                Object.keys(allData[selectedUsers[0]]).sort() : [];
+
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            const ctx = document.getElementById('myChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'ユーザー別データ推移'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '合算値'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '日付'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 初期化の呼び出し方法を変更
+        window.onload = function() {
+            gapi.load('client', function() {
+                console.log('GAPI client loaded'); // デバッグ用
+                initClient();
+            });
+        };
+    </script>
+</body>
+</html> 
