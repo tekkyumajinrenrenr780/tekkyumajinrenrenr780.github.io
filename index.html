@@ -136,8 +136,8 @@
 
         .chart-container {
             position: relative;
-            height: 35vh;
-            min-height: 300px;
+            height: 50vh;
+            min-height: 400px;
             margin: 20px 0;
             background: white;
             border-radius: 16px;
@@ -513,13 +513,14 @@
             const users = new Set();
 
             let cumulativeScore = {}; // 累計スコアを保持するオブジェクト
+            let cumulativeChipPurchase = {}; // 累計チップ購入を保持するオブジェクト
 
             for (let i = 1; i < values.length; i++) {
                 if (!values[i] || values[i].length < 9) continue;
                 
                 const date = values[i][0];         // A列: DATE from Sheets
                 const userId = values[i][5];       // F列: USER ID
-                const chipPurchase = parseFloat(values[i][7]) || 0;  // H列: 購入
+                const chipPurchase = parseFloat(values[i][6]) || 0;  // G列: 購入
                 const score = parseFloat(values[i][8]) || 0;         // I列: チップ増減
                 
                 if (!date || !userId || isNaN(new Date(date).getTime())) {
@@ -533,16 +534,15 @@
                     allData[userId] = {};
                     chipPurchaseData[userId] = {};
                     cumulativeScore[userId] = 0; // 初期化
+                    cumulativeChipPurchase[userId] = 0; // 初期化
                 }
                 
                 // 日付ごとの累積を計算
                 cumulativeScore[userId] += score; // 累計スコアを更新
                 allData[userId][date] = cumulativeScore[userId]; // I列に累計値を格納
 
-                if (!chipPurchaseData[userId][date]) {
-                    chipPurchaseData[userId][date] = 0;
-                }
-                chipPurchaseData[userId][date] -= chipPurchase; // チップ購入の累計
+                cumulativeChipPurchase[userId] += chipPurchase; // 累計チップ購入を更新
+                chipPurchaseData[userId][date] = cumulativeChipPurchase[userId]; // G列に累計値を格納
             }
 
             console.log('処理されたユーザー:', Array.from(users));
