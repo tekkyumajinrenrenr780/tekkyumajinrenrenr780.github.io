@@ -29,16 +29,20 @@
         }
 
         .user-select {
-            padding: 12px 20px;
-            font-size: 32px;
+            padding: 8px 15px;
+            font-size: 16px;
             border: 2px solid #eef2f7;
             border-radius: 12px;
-            min-width: 200px;
+            min-width: 150px;
+            max-width: 300px;
             background-color: #f8fafc;
             color: #1a1f36;
             appearance: none;
             cursor: pointer;
             transition: all 0.2s ease;
+            height: auto;
+            max-height: 200px;
+            overflow-y: auto;
         }
 
         .user-select:hover {
@@ -47,13 +51,13 @@
         }
 
         .user-select option {
-            padding: 12px;
-            font-size: 32px;
+            padding: 8px;
+            font-size: 16px;
         }
 
         .clear-button {
-            padding: 12px 20px;
-            font-size: 28px;
+            padding: 8px 15px;
+            font-size: 14px;
             color: #2196F3;
             background: #fff;
             border: 2px solid #2196F3;
@@ -77,8 +81,8 @@
         }
 
         .interval-button {
-            padding: 10px 20px;
-            font-size: 28px;
+            padding: 8px 15px;
+            font-size: 14px;
             font-weight: 600;
             border: none;
             background: transparent;
@@ -111,10 +115,10 @@
         .score-item {
             display: flex;
             align-items: center;
-            padding: 15px 25px;
+            padding: 10px 15px;
             background: #f8fafc;
             border-radius: 12px;
-            font-size: 32px;
+            font-size: 16px;
             font-weight: 600;
             color: #1a1f36;
             transition: all 0.2s ease;
@@ -141,6 +145,12 @@
             padding: 20px;
         }
 
+        .chart-js-options {
+            font: {
+                size: 14px;
+            }
+        }
+
         @media (max-width: 768px) {
             .chart-controls {
                 flex-direction: column;
@@ -154,6 +164,23 @@
 
             .user-select {
                 width: 100%;
+                font-size: 18px;
+            }
+
+            .user-select option {
+                font-size: 18px;
+            }
+
+            .clear-button {
+                font-size: 16px;
+            }
+
+            .interval-button {
+                font-size: 16px;
+            }
+
+            .score-item {
+                font-size: 18px;
             }
         }
     </style>
@@ -379,7 +406,7 @@
                             display: true,
                             text: '累積スコアとチップ購入推移',
                             font: {
-                                size: 36,
+                                size: 18,
                                 weight: 'bold'
                             },
                             padding: {
@@ -391,9 +418,9 @@
                             position: 'top',
                             labels: {
                                 font: {
-                                    size: 28
+                                    size: 14
                                 },
-                                padding: 25,
+                                padding: 15,
                                 usePointStyle: true,
                                 pointStyle: 'circle'
                             }
@@ -407,10 +434,10 @@
                             padding: 20,
                             bodySpacing: 12,
                             bodyFont: {
-                                size: 28
+                                size: 14
                             },
                             titleFont: {
-                                size: 32,
+                                size: 16,
                                 weight: 'bold'
                             },
                             callbacks: {
@@ -441,7 +468,7 @@
                             beginAtZero: true,
                             ticks: {
                                 font: {
-                                    size: 24
+                                    size: 12
                                 },
                                 padding: 15,
                                 callback: function(value) {
@@ -463,7 +490,7 @@
                                 autoSkip: true,
                                 maxTicksLimit: 6,
                                 font: {
-                                    size: 24
+                                    size: 12
                                 },
                                 padding: 15
                             }
@@ -528,6 +555,8 @@
         function createUserSelect(users) {
             const select = document.getElementById('user-select');
             select.innerHTML = '';
+            
+            select.size = Math.min(users.length, 6);
             
             users.sort().forEach(userId => {
                 const option = document.createElement('option');
