@@ -136,8 +136,8 @@
 
         .chart-container {
             position: relative;
-            height: 50vh;
-            min-height: 400px;
+            height: 60vh;
+            min-height: 500px;
             margin: 20px 0;
             background: white;
             border-radius: 16px;
@@ -492,7 +492,15 @@
                                 font: {
                                     size: 12
                                 },
-                                padding: 15
+                                padding: 15,
+                                callback: function(value) {
+                                    const date = new Date(value);
+                                    return date.toLocaleDateString('ja-JP', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                    });
+                                }
                             }
                         }
                     }
