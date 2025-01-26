@@ -6,16 +6,98 @@
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
         .container {
-            width: 80%;
+            width: 90%;  /* 幅を90%に拡大 */
             margin: 20px auto;
+            min-height: 800px;  /* 最小の高さを設定 */
         }
         .user-selector {
             margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .checkbox-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 10px;
+        }
+        .checkbox-item {
             display: flex;
-            flex-wrap: wrap;
+            align-items: center;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .checkbox-item label {
+            font-size: 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+        #myChart {
+            height: 600px !important;  /* グラフの高さを指定 */
+            margin-top: 20px;
+        }
+        h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        /* 選択ボタン用のスタイル */
+        .selection-buttons {
+            margin: 10px 0;
+            display: flex;
             gap: 10px;
+        }
+        .selection-button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .selection-button:hover {
+            background-color: #45a049;
+        }
+        /* 表示単位切り替えボタンのスタイル */
+        .view-buttons {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .view-button {
+            padding: 8px 15px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .view-button.active {
+            background-color: #0b7dda;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .view-button:hover {
+            background-color: #0b7dda;
+        }
+        /* コントロールパネルのスタイル */
+        .chart-controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
     </style>
 </head>
@@ -23,20 +105,32 @@
     <div class="container">
         <div class="user-selector">
             <h3>表示するユーザーを選択:</h3>
+            <div class="selection-buttons">
+                <button class="selection-button" onclick="selectAll()">全て選択</button>
+                <button class="selection-button" onclick="deselectAll()">全て解除</button>
+            </div>
             <div id="checkbox-container" class="checkbox-container"></div>
+        </div>
+        <div class="chart-controls">
+            <h3>表示期間:</h3>
+            <div class="view-buttons">
+                <button class="view-button active" onclick="changeView('day')">日単位</button>
+                <button class="view-button" onclick="changeView('week')">週単位</button>
+                <button class="view-button" onclick="changeView('month')">月単位</button>
+            </div>
         </div>
         <canvas id="myChart"></canvas>
         <div id="error-message" style="color: red;"></div>
     </div>
 
     <script>
-        const API_KEY = 'AIzaSyAl2CFV1kS96H7BWC4c7qSNoxlgJutO2yo'; // あなたのAPIキー
+        const API_KEY = 'AIzaSyAl2CFV1kS96H7BWC4c7qSNoxlgJutO2yo';
         const SPREADSHEET_ID = '1Y35BApMCv1posrfHAf_KwOYkB47vEFvQMeIaNDcTOic';
-        // A列からI列まで取得
-        const RANGE = '購入履歴!A:I';  // または 'Sheet1!A:I'
+        const RANGE = '購入履歴!A:I';
 
         let myChart = null;
         let allData = {};
+        let currentView = 'day'; // 現在の表示単位
 
         function initClient() {
             console.log('Initializing client...'); // デバッグ用
@@ -115,16 +209,75 @@
                 return;
             }
 
-            users.forEach(userId => {
+            users.sort().forEach(userId => {
                 const div = document.createElement('div');
+                div.className = 'checkbox-item';
                 div.innerHTML = `
-                    <label>
-                        <input type="checkbox" value="${userId}" onchange="updateChart()">
-                        ${userId}
-                    </label>
+                    <input type="checkbox" id="user-${userId}" value="${userId}">
+                    <label for="user-${userId}">ユーザー ${userId}</label>
                 `;
                 container.appendChild(div);
+                
+                // チェックボックスの変更イベントを追加
+                div.querySelector('input').addEventListener('change', updateChart);
             });
+        }
+
+        function selectAll() {
+            document.querySelectorAll('input[type="checkbox"]')
+                .forEach(cb => cb.checked = true);
+            updateChart();
+        }
+
+        function deselectAll() {
+            document.querySelectorAll('input[type="checkbox"]')
+                .forEach(cb => cb.checked = false);
+            updateChart();
+        }
+
+        // 日付を集計単位でグループ化する関数
+        function groupDataByUnit(data, unit) {
+            const grouped = {};
+            
+            Object.entries(data).forEach(([date, value]) => {
+                let groupKey;
+                const dateObj = new Date(date);
+                
+                switch(unit) {
+                    case 'day':
+                        groupKey = date; // そのまま使用
+                        break;
+                    case 'week':
+                        // 週の初めの日付を取得
+                        const weekStart = new Date(dateObj);
+                        weekStart.setDate(dateObj.getDate() - dateObj.getDay());
+                        groupKey = weekStart.toISOString().split('T')[0];
+                        break;
+                    case 'month':
+                        groupKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+                        break;
+                }
+                
+                if (!grouped[groupKey]) {
+                    grouped[groupKey] = 0;
+                }
+                grouped[groupKey] += value;
+            });
+            
+            return grouped;
+        }
+
+        // 表示単位を変更する関数
+        function changeView(view) {
+            currentView = view;
+            
+            // ボタンのアクティブ状態を更新
+            document.querySelectorAll('.view-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.querySelector(`[onclick="changeView('${view}')"]`).classList.add('active');
+            
+            updateChart();
         }
 
         function updateChart() {
@@ -149,11 +302,13 @@
                 ];
 
                 const userData = allData[userId];
-                const dates = Object.keys(userData).sort();
+                // データを現在の表示単位でグループ化
+                const groupedData = groupDataByUnit(userData, currentView);
+                const dates = Object.keys(groupedData).sort();
                 
                 return {
                     label: `ユーザー ${userId}`,
-                    data: dates.map(date => userData[date]),
+                    data: dates.map(date => groupedData[date]),
                     borderColor: colors[index % colors.length],
                     backgroundColor: colors[index % colors.length].replace('1)', '0.2)'),
                     tension: 0.3,
@@ -161,8 +316,8 @@
                 };
             });
 
-            const dates = selectedUsers.length > 0 ? 
-                Object.keys(allData[selectedUsers[0]]).sort() : [];
+            const allDates = selectedUsers.length > 0 ? 
+                Object.keys(groupDataByUnit(allData[selectedUsers[0]], currentView)).sort() : [];
 
             if (myChart) {
                 myChart.destroy();
@@ -172,15 +327,31 @@
             myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: dates,
+                    labels: allDates,
                     datasets: datasets
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         title: {
                             display: true,
-                            text: 'ユーザー別TOTALスコア推移'
+                            text: `ユーザー別TOTALスコア推移 (${
+                                currentView === 'day' ? '日単位' : 
+                                currentView === 'week' ? '週単位' : '月単位'
+                            })`,
+                            font: {
+                                size: 18
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    size: 14
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -188,13 +359,19 @@
                             beginAtZero: true,
                             title: {
                                 display: true,
-                                text: 'TOTALスコア'
+                                text: 'TOTALスコア',
+                                font: {
+                                    size: 14
+                                }
                             }
                         },
                         x: {
                             title: {
                                 display: true,
-                                text: '日付'
+                                text: '日付',
+                                font: {
+                                    size: 14
+                                }
                             }
                         }
                     }
