@@ -1,629 +1,970 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ユーザー別データ推移</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://apis.google.com/js/api.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ポーカー統計グラフ</title>
+    
+    <!-- Chart.jsを先に読み込む -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <!-- Google API -->
+
     <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            margin: 0;
+            padding: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-text-size-adjust: 100%;
+        }
+
         .container {
-            width: 95%;
-            margin: 15px auto;
-        }
-        
-        .chart-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
+            max-width: 100%;
+            margin: 0 auto;
         }
 
-        .select-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        .controls-container {
+            margin-bottom: 15px;
+            width: 100%;
+            position: relative;
         }
 
-        .user-select {
-            padding: 8px 15px;
-            font-size: 16px;
-            border: 2px solid #eef2f7;
-            border-radius: 12px;
-            min-width: 150px;
-            max-width: 300px;
-            background-color: #f8fafc;
-            color: #1a1f36;
-            appearance: none;
+        .controls-wrapper {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            position: relative;
+            height: 32px;
+        }
+
+        .select-wrapper {
+            width: 200px;
+            position: relative;
+        }
+
+        .spacer {
+            flex-grow: 1;
+        }
+
+        .select-button,
+        .clear-button {
+            height: 32px;
+            padding: 0 12px;
+            background-color: transparent;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 30px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
             transition: all 0.2s ease;
-            height: auto;
-            max-height: 200px;
-            overflow-y: auto;
         }
 
-        .user-select:hover {
-            border-color: #2196F3;
-            background-color: #ffffff;
-        }
-
-        .user-select option {
-            padding: 8px;
-            font-size: 16px;
+        .select-button {
+            width: 100%;
+            justify-content: space-between;
         }
 
         .clear-button {
-            padding: 8px 15px;
-            font-size: 14px;
-            color: #2196F3;
-            background: #fff;
-            border: 2px solid #2196F3;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
+            margin-left: auto;
         }
 
+        .arrow-down {
+            font-size: 10px;
+            margin-left: 8px;
+        }
+
+        .select-button:hover,
         .clear-button:hover {
-            background: #2196F3;
-            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
         }
 
-        .interval-buttons {
-            display: flex;
-            background: #f8fafc;
-            padding: 4px;
-            border-radius: 12px;
-            gap: 4px;
+        .select-popup {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 180px;
+            background-color: rgba(26, 26, 26, 0.8);
+            border: 1px solid rgba(51, 51, 51, 0.5);
+            border-radius: 6px;
+            margin-top: 4px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
 
-        .interval-button {
-            padding: 8px 15px;
-            font-size: 14px;
-            font-weight: 600;
-            border: none;
-            background: transparent;
-            color: #64748b;
+        .popup-content {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .search-box {
+            padding: 6px;
+            border-bottom: 1px solid rgba(51, 51, 51, 0.5);
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 4px 8px;
+            background-color: rgba(42, 42, 42, 0.5);
+            color: #ffffff;
+            border: 1px solid rgba(68, 68, 68, 0.5);
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .user-list {
+            padding: 4px 0;
+        }
+
+        .user-option {
+            padding: 4px 8px;
             cursor: pointer;
-            border-radius: 10px;
-            transition: all 0.2s ease;
-        }
-
-        .interval-button:hover {
-            color: #2196F3;
-        }
-
-        .interval-button.active {
-            background: #2196F3;
-            color: white;
-        }
-
-        .score-display {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin: 15px 0;
-            padding: 20px;
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .score-item {
             display: flex;
             align-items: center;
-            padding: 10px 15px;
-            background: #f8fafc;
+            gap: 6px;
+            font-size: 13px;
+        }
+
+        .user-option:hover {
+            background-color: rgba(42, 42, 42, 0.7);
+        }
+
+        .user-option.selected {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-option.selected::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.2;
+            z-index: -1;
+        }
+
+        .user-option input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .selected-users {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+            min-height: 22px;
+            width: 100%;
+        }
+
+        .selected-user-tag {
+            color: #ffffff;
+            padding: 2px 8px;
             border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            color: #1a1f36;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid transparent;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             transition: all 0.2s ease;
         }
 
-        .score-value {
-            color: #2196F3;
-            margin-left: 12px;
-            font-weight: 700;
+        .selected-user-tag:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
         }
 
-        .score-value.negative {
-            color: #ef4444;
+        .remove-user {
+            cursor: pointer;
+            opacity: 0.8;
+            font-weight: bold;
+            padding: 0 2px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            font-size: 10px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 14px;
+            min-height: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .remove-user:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        #clear-select {
+            margin-top: 6px;
+            padding: 4px 10px;
+            background-color: rgba(26, 26, 26, 0.5);
+            color: #ffffff;
+            border: 1px solid rgba(51, 51, 51, 0.5);
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        #clear-select:hover {
+            background-color: rgba(26, 26, 26, 0.7);
         }
 
         .chart-container {
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            height: 50vh;
+            min-height: 300px;
+            width: 100%;
             position: relative;
-            height: 60vh;
-            min-height: 500px;
-            margin: 20px 0;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            padding: 20px;
         }
 
-        .chart-js-options {
-            font: {
-                size: 14px;
+        canvas#chart {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .stats-container {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .user-stat {
+            background-color: rgba(26, 26, 26, 0.5);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-stat-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .user-stat-value {
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .error-message {
+            color: #ff0000;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .score-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+            width: 100%;
+        }
+
+        .score-card {
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .score-card > div {
+            margin-bottom: 5px;
+        }
+
+        .negative {
+            color: #ff0000;
+        }
+
+        /* iPhone SE などの小さい画面向け */
+        @media screen and (max-width: 375px) {
+            body {
+                padding: 5px;
+            }
+
+            .chart-container {
+                height: 40vh;
+                min-height: 250px;
+            }
+
+            .score-display {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-container, .score-card {
+                font-size: 13px;
             }
         }
 
-        @media (max-width: 768px) {
-            .chart-controls {
-                flex-direction: column;
-                gap: 20px;
+        /* iPhone Plus/Pro Max 向け */
+        @media screen and (min-width: 414px) and (max-width: 428px) {
+            .chart-container {
+                height: 45vh;
+            }
+        }
+
+        /* タッチデバイスでの操作性向上 */
+        @media (hover: none) {
+            .user-select, button {
+                cursor: default;
             }
 
-            .select-container {
-                width: 100%;
-                flex-direction: column;
+            button:active {
+                opacity: 0.7;
+            }
+        }
+
+        /* ダークモード対応 */
+        @media (prefers-color-scheme: dark) {
+            .user-select, button, .chart-container, .stats-container, .score-card {
+                background-color: #1a1a1a;
+            }
+        }
+
+        /* モバイル対応 */
+        @media (max-width: 480px) {
+            .select-wrapper {
+                width: 160px;
             }
 
-            .user-select {
-                width: 100%;
-                font-size: 18px;
-            }
-
-            .user-select option {
-                font-size: 18px;
-            }
-
+            .select-button,
             .clear-button {
-                font-size: 16px;
+                padding: 0 8px;
             }
+        }
 
-            .interval-button {
-                font-size: 16px;
-            }
+        /* スクロールバーのカスタマイズ */
+        .popup-content::-webkit-scrollbar {
+            width: 6px;
+        }
 
-            .score-item {
-                font-size: 18px;
-            }
+        .popup-content::-webkit-scrollbar-track {
+            background: rgba(26, 26, 26, 0.3);
+        }
+
+        .popup-content::-webkit-scrollbar-thumb {
+            background: rgba(102, 102, 102, 0.5);
+            border-radius: 3px;
+        }
+
+        .popup-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 102, 102, 0.7);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="chart-controls">
-            <div class="select-container">
-                <select id="user-select" class="user-select" multiple>
-                    <!-- ユーザーオプションはJavaScriptで動的に追加 -->
-                </select>
-                <button id="clear-select" class="clear-button">全解除</button>
+        <div id="error-message" class="error-message"></div>
+        
+        <div class="controls-container">
+            <div class="controls-wrapper">
+                <div class="select-wrapper">
+                    <button id="user-select-btn" class="select-button">
+                        ユーザーを選択
+                        <span class="arrow-down">▼</span>
+                    </button>
+                    <div id="user-select-popup" class="select-popup">
+                        <div class="popup-content">
+                            <div class="search-box">
+                                <input type="text" id="user-search" placeholder="検索...">
+                            </div>
+                            <div class="user-list">
+                                <!-- ユーザーリストがここに動的に追加されます -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="spacer"></div>
+                <button id="clear-select" class="clear-button">選択クリア</button>
             </div>
-            <div class="interval-buttons">
-                <button class="interval-button active" onclick="changeView('day')">1D</button>
-                <button class="interval-button" onclick="changeView('week')">1W</button>
-                <button class="interval-button" onclick="changeView('month')">1M</button>
-            </div>
+            <div class="selected-users" id="selected-users"></div>
+            <div class="stats-container" id="stats-container"></div>
         </div>
-        <div id="score-display" class="score-display"></div>
+
         <div class="chart-container">
-            <canvas id="myChart"></canvas>
+            <canvas id="chart"></canvas>
+        </div>
+
+        <div class="score-display" id="score-display">
+            <!-- スコア表示がここに動的に追加されます -->
         </div>
     </div>
 
     <script>
-        let myChart = null;
-        let currentView = 'day';
-        let allData = {};
-        let chipPurchaseData = {};
-
+        // グローバル定数を一箇所にまとめる
         const API_KEY = 'AIzaSyAl2CFV1kS96H7BWC4c7qSNoxlgJutO2yo';
+        const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
         const SPREADSHEET_ID = '1Y35BApMCv1posrfHAf_KwOYkB47vEFvQMeIaNDcTOic';
-        const RANGE = '購入履歴!A:I';
 
-        function groupDataByUnit(data, unit) {
-            if (!data || typeof data !== 'object') {
-                console.warn('データが不正です:', data);
-                return {};
-            }
+        // カラーパレット定義
+        const COLORS = [
+            { border: 'rgb(0, 122, 255)', background: 'rgba(0, 122, 255, 0.5)' },
+            { border: 'rgb(255, 45, 85)', background: 'rgba(255, 45, 85, 0.5)' },
+            { border: 'rgb(52, 199, 89)', background: 'rgba(52, 199, 89, 0.5)' },
+            { border: 'rgb(255, 149, 0)', background: 'rgba(255, 149, 0, 0.5)' },
+            { border: 'rgb(175, 82, 222)', background: 'rgba(175, 82, 222, 0.5)' }
+        ];
 
-            const grouped = {};
-            try {
-                const entries = Object.entries(data)
-                    .filter(([date]) => date && date.trim())
-                    .sort(([a], [b]) => new Date(a) - new Date(b));
-                
-                entries.forEach(([date, value]) => {
-                    let groupKey;
-                    const dateObj = new Date(date);
-                    
-                    if (isNaN(dateObj.getTime())) {
-                        console.warn('不正な日付形式:', date);
-                        return;
+        // Google API初期化関数を修正
+        async function initGoogleAPI() {
+            return new Promise((resolve, reject) => {
+                gapi.load('client', async () => {
+                    try {
+                        await gapi.client.init({
+                            apiKey: API_KEY,
+                            discoveryDocs: [DISCOVERY_DOC],
+                        });
+                        resolve();
+                    } catch (error) {
+                        console.error('Google API初期化エラー:', error);
+                        reject(error);
                     }
-                    
-                    switch(unit) {
-                        case 'day':
-                            groupKey = date;
-                            break;
-                        case 'week':
-                            const weekStart = new Date(dateObj);
-                            weekStart.setDate(dateObj.getDate() - dateObj.getDay());
-                            groupKey = weekStart.toISOString().split('T')[0];
-                            break;
-                        case 'month':
-                            groupKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-01`;
-                            break;
-                        default:
-                            groupKey = date;
-                    }
-                    
-                    grouped[groupKey] = value;
                 });
+            });
+        }
+
+        // データ処理関数
+        function processData(rawData) {
+            try {
+                const headers = rawData[0];
+                const dataRows = rawData.slice(1);
+                const processedData = {};
+
+                dataRows.forEach(row => {
+                    if (row.length < 9) return;
+                    
+                    const date = new Date(row[0]);
+                    const user = row[5];
+                    const points = Number(row[8]);
+                    
+                    if (!isNaN(points) && user && date instanceof Date && !isNaN(date)) {
+                        if (!processedData[user]) {
+                            processedData[user] = [];
+                        }
+                        
+                        const lastEntry = processedData[user][processedData[user].length - 1];
+                        const cumulativePoints = lastEntry ? lastEntry.points + points : points;
+                        
+                        processedData[user].push({
+                            date: date,
+                            points: cumulativePoints,
+                            dailyPoints: points
+                        });
+                    }
+                });
+
+                // 日付でソート
+                Object.keys(processedData).forEach(user => {
+                    processedData[user].sort((a, b) => a.date - b.date);
+                });
+
+                return processedData;
             } catch (error) {
-                console.error('データのグループ化でエラー:', error);
-                return {};
+                console.error('データ処理エラー:', error);
+                throw error;
             }
+        }
+
+        // グラフ更新関数を修正
+        function updateChart(data, selectedUsers) {
+            const ctx = document.getElementById('chart').getContext('2d');
             
-            return grouped;
-        }
-
-        function updateScoreDisplay() {
-            const select = document.getElementById('user-select');
-            const selectedUsers = Array.from(select.selectedOptions)
-                .map(option => option.value)
-                .filter(value => value !== '');
-
-            const scoreDisplay = document.getElementById('score-display');
-            scoreDisplay.innerHTML = '';
-
-            selectedUsers.forEach(userId => {
-                const userData = allData[userId];
-                if (!userData) return;
-
-                const dates = Object.keys(userData).sort();
-                const latestScore = userData[dates[dates.length - 1]];
-                const chipData = chipPurchaseData[userId];
-                const latestChip = chipData ? chipData[dates[dates.length - 1]] : 0;
-
-                const scoreItem = document.createElement('div');
-                scoreItem.className = 'score-item';
-                
-                const formattedScore = new Intl.NumberFormat('ja-JP').format(
-                    Math.round(latestScore)
-                );
-                const formattedChip = new Intl.NumberFormat('ja-JP').format(
-                    Math.abs(Math.round(latestChip))
-                );
-                
-                scoreItem.innerHTML = `
-                    ${userId}:
-                    <span class="score-value">
-                        ${formattedScore}
-                    </span>
-                    <span class="score-value negative">
-                        -${formattedChip}
-                    </span>
-                `;
-                scoreDisplay.appendChild(scoreItem);
-            });
-        }
-
-        function updateChart() {
-            const select = document.getElementById('user-select');
-            const selectedUsers = Array.from(select.selectedOptions)
-                .map(option => option.value)
-                .filter(value => value !== '');
-
-            if (selectedUsers.length === 0) {
-                if (myChart) {
-                    myChart.destroy();
-                    myChart = null;
-                }
-                return;
+            if (window.myChart) {
+                window.myChart.destroy();
             }
 
-            const validUsers = selectedUsers.filter(userId => {
-                if (!allData[userId] || Object.keys(allData[userId]).length === 0) {
-                    console.warn(`ユーザー ${userId} のデータが見つかりません`);
-                    return false;
-                }
-                return true;
-            });
+            const datasets = selectedUsers.map((user, index) => {
+                const colorIndex = index % COLORS.length;
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, COLORS[colorIndex].background);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
-            if (validUsers.length === 0) {
-                console.warn('表示可能なデータがありません');
-                return;
-            }
-
-            const datasets = validUsers.map((userId, index) => {
-                const colors = [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(153, 102, 255, 1)',
-                ];
-
-                const userData = allData[userId];
-                const groupedData = groupDataByUnit(userData, currentView);
-                const dates = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
-                
                 return {
-                    label: `スコア ${userId}`,
-                    data: dates.map(date => groupedData[date]),
-                    borderColor: colors[index % colors.length],
-                    backgroundColor: colors[index % colors.length].replace('1)', '0.2)'),
-                    tension: 0.3,
+                    label: user,
+                    data: data[user],
+                    borderColor: COLORS[colorIndex].border,
+                    backgroundColor: gradient,
+                    tension: 0,
                     fill: true,
-                    order: 1
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointHitRadius: 10,
+                    pointHoverBackgroundColor: COLORS[colorIndex].border,
+                    parsing: {
+                        xAxisKey: 'date',
+                        yAxisKey: 'points'
+                    }
                 };
             });
 
-            const chipDatasets = validUsers.map((userId, index) => {
-                const colors = [
-                    'rgba(231, 76, 60, 1)',
-                    'rgba(52, 152, 219, 1)',
-                    'rgba(46, 204, 113, 1)',
-                    'rgba(241, 196, 15, 1)',
-                    'rgba(155, 89, 182, 1)',
-                ];
-
-                const chipData = chipPurchaseData[userId];
-                const groupedChipData = groupDataByUnit(chipData, currentView);
-                const dates = Object.keys(groupedChipData).sort((a, b) => new Date(a) - new Date(b));
-                
-                return {
-                    label: `チップ購入 ${userId}`,
-                    data: dates.map(date => groupedChipData[date]),
-                    borderColor: colors[index % colors.length],
-                    backgroundColor: colors[index % colors.length].replace('1)', '0.1)'),
-                    tension: 0.3,
-                    fill: true,
-                    order: 2,
-                    borderDash: [5, 5]
-                };
-            });
-
-            const allDates = validUsers.length > 0 ? 
-                Object.keys(groupDataByUnit(allData[validUsers[0]], currentView)).sort((a, b) => new Date(a) - new Date(b)) : [];
-
-            if (myChart) {
-                myChart.destroy();
-            }
-
-            const ctx = document.getElementById('myChart').getContext('2d');
-            myChart = new Chart(ctx, {
+            window.myChart = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: allDates,
-                    datasets: [...datasets, ...chipDatasets]
-                },
+                data: { datasets },
                 options: {
+                    animation: {
+                        duration: 0
+                    },
                     responsive: true,
                     maintainAspectRatio: false,
                     interaction: {
-                        mode: 'index',
+                        mode: 'nearest',
+                        axis: 'x',
                         intersect: false
                     },
                     plugins: {
-                        title: {
-                            display: true,
-                            text: '累積スコアとチップ購入推移',
-                            font: {
-                                size: 18,
-                                weight: 'bold'
-                            },
-                            padding: {
-                                top: 20,
-                                bottom: 20
+                        tooltip: {
+                            mode: 'index',
+                            callbacks: {
+                                title: (context) => {
+                                    const date = new Date(context[0].parsed.x);
+                                    return date.toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: 'numeric' 
+                                    });
+                                },
+                                label: (context) => {
+                                    return `${context.dataset.label}: ${Math.round(context.parsed.y).toLocaleString()} pts`;
+                                }
                             }
                         },
                         legend: {
-                            position: 'top',
+                            display: true,
+                            position: 'bottom',
                             labels: {
-                                font: {
-                                    size: 14
-                                },
+                                color: '#ffffff',
                                 padding: 15,
-                                usePointStyle: true,
-                                pointStyle: 'circle'
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            titleColor: '#1a1f36',
-                            bodyColor: '#1a1f36',
-                            borderColor: '#e2e8f0',
-                            borderWidth: 2,
-                            padding: 20,
-                            bodySpacing: 12,
-                            bodyFont: {
-                                size: 14
-                            },
-                            titleFont: {
-                                size: 16,
-                                weight: 'bold'
-                            },
-                            callbacks: {
-                                title: function(tooltipItems) {
-                                    const date = new Date(tooltipItems[0].label);
-                                    return date.toLocaleDateString('ja-JP', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric'
-                                    });
-                                },
-                                label: function(context) {
-                                    const userId = context.dataset.label.split(' ')[1];
-                                    const value = context.raw;
-                                    const formattedValue = new Intl.NumberFormat('ja-JP').format(Math.abs(Math.round(value)));
-                                    
-                                    if (context.dataset.label.startsWith('スコア')) {
-                                        return `${userId} Total: ${formattedValue}`;
-                                    } else {
-                                        return `${userId} 購入累計: ${formattedValue}`;
-                                    }
-                                }
+                                font: { size: 12 }
                             }
                         }
                     },
                     scales: {
-                        y: {
-                            beginAtZero: true,
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'month',
+                                displayFormats: {
+                                    month: 'MMM'
+                                },
+                                unitStepSize: 1
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
                             ticks: {
+                                color: '#ffffff',
                                 font: {
                                     size: 12
                                 },
-                                padding: 15,
-                                callback: function(value) {
-                                    if (Math.abs(value) >= 1000000) {
-                                        return (value / 1000000).toFixed(1) + 'M';
-                                    } else if (Math.abs(value) >= 1000) {
-                                        return (value / 1000).toFixed(1) + 'k';
-                                    }
-                                    return value;
+                                maxRotation: 0,
+                                autoSkip: true,
+                                autoSkipPadding: 40,
+                                align: 'start',
+                                source: 'data',
+                                callback: function(value, index, values) {
+                                    const date = new Date(value);
+                                    return date.toLocaleDateString('en-US', { 
+                                        month: 'short'
+                                    });
                                 }
                             }
                         },
-                        x: {
+                        y: {
+                            beginAtZero: true,
                             grid: {
-                                display: false
+                                color: 'rgba(255, 255, 255, 0.1)'
                             },
                             ticks: {
-                                maxRotation: 0,
-                                autoSkip: true,
-                                maxTicksLimit: 6,
+                                color: '#ffffff',
                                 font: {
                                     size: 12
                                 },
-                                padding: 15,
                                 callback: function(value) {
-                                    const date = new Date(value);
-                                    return date.toLocaleDateString('ja-JP', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric'
-                                    });
+                                    return value.toLocaleString();
                                 }
                             }
                         }
                     }
                 }
             });
-        }
 
-        function processData(values) {
-            if (!values || values.length === 0) {
-                console.error('データが空です');
-                return;
+            // イベントリスナーの設定を修正
+            const canvas = document.getElementById('chart');
+            let verticalLineX = null;
+            let drawingLoop = false;
+
+            function drawVerticalLine(x) {
+                const ctx = canvas.getContext('2d');
+                const chartArea = window.myChart.chartArea;
+                
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([2, 2]);
+                ctx.moveTo(x, chartArea.top);
+                ctx.lineTo(x, chartArea.bottom);
+                ctx.stroke();
+                ctx.restore();
             }
 
-            console.log('データ処理開始:', values.length);
-
-            allData = {};
-            chipPurchaseData = {};
-            const users = new Set();
-
-            let cumulativeScore = {}; // 累計スコアを保持するオブジェクト
-            let cumulativeChipPurchase = {}; // 累計チップ購入を保持するオブジェクト
-
-            for (let i = 1; i < values.length; i++) {
-                if (!values[i] || values[i].length < 9) continue;
+            // マウスオーバー時の処理を修正
+            canvas.addEventListener('mousemove', (event) => {
+                if (!canvas) return;
                 
-                const date = values[i][0];         // A列: DATE from Sheets
-                const userId = values[i][5];       // F列: USER ID
-                const chipPurchase = parseFloat(values[i][6]) || 0;  // G列: 購入
-                const score = parseFloat(values[i][8]) || 0;         // I列: チップ増減
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
                 
-                if (!date || !userId || isNaN(new Date(date).getTime())) {
-                    console.warn(`行 ${i} のデータが不正です:`, values[i]);
-                    continue;
+                if (verticalLineX !== x) {
+                    verticalLineX = x;
+                    
+                    if (!drawingLoop) {
+                        drawingLoop = true;
+                        requestAnimationFrame(() => {
+                            drawVerticalLine(x);
+                            drawingLoop = false;
+                        });
+                    }
                 }
-
-                users.add(userId);
-                
-                if (!allData[userId]) {
-                    allData[userId] = {};
-                    chipPurchaseData[userId] = {};
-                    cumulativeScore[userId] = 0; // 初期化
-                    cumulativeChipPurchase[userId] = 0; // 初期化
-                }
-                
-                // 日付ごとの累積を計算
-                cumulativeScore[userId] += score; // 累計スコアを更新
-                allData[userId][date] = cumulativeScore[userId]; // I列に累計値を格納
-
-                cumulativeChipPurchase[userId] += chipPurchase; // 累計チップ購入を更新
-                chipPurchaseData[userId][date] = cumulativeChipPurchase[userId]; // G列に累計値を格納
-            }
-
-            console.log('処理されたユーザー:', Array.from(users));
-            createUserSelect(Array.from(users));
-        }
-
-        function createUserSelect(users) {
-            const select = document.getElementById('user-select');
-            select.innerHTML = '';
-            
-            select.size = Math.min(users.length, 6);
-            
-            users.sort().forEach(userId => {
-                const option = document.createElement('option');
-                option.value = userId;
-                option.text = userId;
-                select.appendChild(option);
             });
 
-            select.addEventListener('change', () => {
-                updateChart();
-                updateScoreDisplay();
-            });
-
-            document.getElementById('clear-select').addEventListener('click', function() {
-                Array.from(select.options).forEach(option => {
-                    option.selected = false;
+            // タッチデバイス対応
+            canvas.addEventListener('touchmove', (event) => {
+                event.preventDefault();
+                const touch = event.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
                 });
-                updateChart();
-                updateScoreDisplay();
-            });
+                canvas.dispatchEvent(mouseEvent);
+            }, { passive: false });
+
+            // 統計情報を更新
+            updateStats(data, selectedUsers);
         }
 
-        function changeView(view) {
-            currentView = view;
-            
-            document.querySelectorAll('.interval-button').forEach(button => {
-                button.classList.remove('active');
-            });
-            event.target.classList.add('active');
+        // 統計計算関数を追加（493行目のエラー解消用）
+        function calculateStats(data, selectedUsers) {
+            try {
+                let maxPoints = -Infinity;
+                let minPoints = Infinity;
+                let totalDailyChange = 0;
+                let totalDays = 0;
 
-            const select = document.getElementById('user-select');
-            if (Array.from(select.selectedOptions).length > 0) {
-                updateChart();
+                selectedUsers.forEach(user => {
+                    if (!data[user]) return;
+                    
+                    const userData = data[user];
+                    if (userData.length === 0) return;
+
+                    userData.forEach(entry => {
+                        maxPoints = Math.max(maxPoints, entry.points);
+                        minPoints = Math.min(minPoints, entry.points);
+                        
+                        if (entry.dailyPoints && entry.dailyPoints !== 0) {
+                            totalDailyChange += entry.dailyPoints;
+                            totalDays++;
+                        }
+                    });
+                });
+
+                return {
+                    maxPoints: maxPoints === -Infinity ? 0 : Math.round(maxPoints),
+                    minPoints: minPoints === Infinity ? 0 : Math.round(minPoints),
+                    avgDailyChange: totalDays > 0 ? Math.round(totalDailyChange / totalDays) : 0,
+                    totalUsers: Object.keys(data).length
+                };
+            } catch (error) {
+                console.error('統計計算エラー:', error);
+                return {
+                    maxPoints: 0,
+                    minPoints: 0,
+                    avgDailyChange: 0,
+                    totalUsers: 0
+                };
             }
         }
 
-        function initClient() {
-            gapi.client.init({
-                apiKey: API_KEY,
-                discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
-            }).then(() => {
-                loadData();
-            }).catch(error => {
-                console.error('API初期化エラー:', error);
+        // 統計情報更新関数も修正
+        function updateStats(data, selectedUsers) {
+            const statsContainer = document.getElementById('stats-container');
+            statsContainer.innerHTML = '';
+
+            selectedUsers.forEach((user, index) => {
+                const userData = data[user];
+                if (userData && userData.length > 0) {
+                    const lastScore = userData[userData.length - 1].points;
+                    const colorIndex = index % COLORS.length;
+                    const color = COLORS[colorIndex];
+
+                    const statDiv = document.createElement('div');
+                    statDiv.className = 'user-stat';
+                    statDiv.style.borderLeft = `3px solid ${color.border}`;
+                    
+                    statDiv.innerHTML = `
+                        <span class="user-stat-label">${user}:</span>
+                        <span class="user-stat-value">${lastScore.toLocaleString()} pts</span>
+                    `;
+                    
+                    statsContainer.appendChild(statDiv);
+                }
             });
         }
 
-        function loadData() {
-            gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: RANGE
-            }).then(response => {
-                console.log('データ読み込み成功');
-                processData(response.result.values);
-            }).catch(error => {
-                console.error('データ読み込みエラー:', error);
+        // スコア表示更新関数
+        function updateScoreDisplay(data, selectedUsers) {
+            const displayElement = document.getElementById('score-display');
+            displayElement.innerHTML = '';
+
+            selectedUsers.forEach(user => {
+                const userData = data[user];
+                if (!userData || userData.length === 0) return;
+
+                const latestData = userData[userData.length - 1];
+                const scoreCard = document.createElement('div');
+                scoreCard.className = 'score-card';
+                scoreCard.innerHTML = `
+                    <div>${user}</div>
+                    <div>現在のポイント: ${Math.round(latestData.points).toLocaleString()}</div>
+                    <div class="${latestData.dailyPoints < 0 ? 'negative' : ''}">
+                        本日の収支: ${Math.round(latestData.dailyPoints).toLocaleString()}
+                    </div>
+                `;
+                displayElement.appendChild(scoreCard);
             });
         }
 
-        window.onload = function() {
-            gapi.load('client', initClient);
-        };
+        // ユーザー選択の設定部分を修正
+        function setupUserSelect(users, processedData) {
+            const selectBtn = document.getElementById('user-select-btn');
+            const popup = document.getElementById('user-select-popup');
+            const userList = popup.querySelector('.user-list');
+            const searchInput = document.getElementById('user-search');
+            const selectedUsersDiv = document.getElementById('selected-users');
+            let selectedUsers = [];
+            let isPopupOpen = false;
+
+            // ポップアップの表示/非表示を制御
+            function togglePopup(show) {
+                popup.style.display = show ? 'block' : 'none';
+                isPopupOpen = show;
+                
+                if (show) {
+                    // ポップアップを開いたときに検索ボックスにフォーカス
+                    searchInput.focus();
+                    
+                    // 画面外クリックのイベントリスナーを追加
+                    setTimeout(() => {
+                        document.addEventListener('click', handleOutsideClick);
+                    }, 0);
+                } else {
+                    // ポップアップを閉じるときにイベントリスナーを削除
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            }
+
+            // 画面外クリックの処理
+            function handleOutsideClick(e) {
+                if (!popup.contains(e.target) && !selectBtn.contains(e.target)) {
+                    togglePopup(false);
+                }
+            }
+
+            // 選択ボタンのクリックイベント
+            selectBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!isPopupOpen) {
+                    togglePopup(true);
+                }
+            });
+
+            // ポップアップ内のクリックイベントの伝播を停止
+            popup.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            // ユーザーリストの作成
+            function createUserList(filteredUsers = users) {
+                userList.innerHTML = '';
+                filteredUsers.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = `user-option ${selectedUsers.includes(user) ? 'selected' : ''}`;
+                    div.innerHTML = `
+                        <input type="checkbox" ${selectedUsers.includes(user) ? 'checked' : ''}>
+                        <span>${user}</span>
+                    `;
+                    div.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleUser(user);
+                    });
+                    userList.appendChild(div);
+                });
+            }
+
+            // 検索機能
+            searchInput.addEventListener('input', (e) => {
+                e.stopPropagation();
+                const searchTerm = searchInput.value.toLowerCase();
+                const filteredUsers = users.filter(user => 
+                    user.toLowerCase().includes(searchTerm)
+                );
+                createUserList(filteredUsers);
+            });
+
+            // キーボードイベントの処理
+            searchInput.addEventListener('keydown', (e) => {
+                e.stopPropagation();
+                if (e.key === 'Escape') {
+                    togglePopup(false);
+                }
+            });
+
+            // ユーザー選択の切り替え
+            function toggleUser(user) {
+                const index = selectedUsers.indexOf(user);
+                if (index === -1) {
+                    selectedUsers.push(user);
+                } else {
+                    selectedUsers.splice(index, 1);
+                }
+                updateSelectedUsers();
+                createUserList();
+                updateChart(processedData, selectedUsers);
+            }
+
+            // 選択されたユーザーの表示更新
+            function updateSelectedUsers() {
+                selectedUsersDiv.innerHTML = '';
+                selectedUsers.forEach((user, index) => {
+                    const colorIndex = index % COLORS.length;
+                    const color = COLORS[colorIndex];
+                    
+                    const tag = document.createElement('span');
+                    tag.className = 'selected-user-tag';
+                    tag.innerHTML = `
+                        ${user}
+                        <span class="remove-user" data-user="${user}">×</span>
+                    `;
+
+                    // グラデーションスタイルを適用
+                    const rgbaBackground = color.background.replace('0.5', '0.7'); // 不透明度を少し上げる
+                    tag.style.background = `linear-gradient(135deg, ${color.border}, ${rgbaBackground})`;
+                    tag.style.borderColor = color.border;
+
+                    selectedUsersDiv.appendChild(tag);
+                });
+            }
+
+            // クリアボタンの処理
+            document.getElementById('clear-select').addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedUsers = [];
+                if (users.length > 0) {
+                    selectedUsers = [users[0]];
+                }
+                updateSelectedUsers();
+                createUserList();
+                updateChart(processedData, selectedUsers);
+            });
+
+            // 選択タグの削除イベント
+            selectedUsersDiv.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-user')) {
+                    const userToRemove = e.target.dataset.user;
+                    selectedUsers = selectedUsers.filter(u => u !== userToRemove);
+                    updateSelectedUsers();
+                    createUserList();
+                    updateChart(processedData, selectedUsers);
+                }
+            });
+
+            // 初期選択
+            if (users.length > 0) {
+                selectedUsers = [users[0]];
+                updateSelectedUsers();
+                createUserList();
+                updateChart(processedData, selectedUsers);
+            }
+
+            // 初期リスト作成
+            createUserList();
+        }
+
+        // アプリケーション起動処理を修正
+        async function startApp() {
+            try {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://apis.google.com/js/api.js';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.body.appendChild(script);
+                });
+
+                await initGoogleAPI();
+                console.log('Google API初期化完了');
+
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: '購入履歴!A:I'
+                });
+
+                if (!response.result || !response.result.values) {
+                    throw new Error('データを取得できませんでした');
+                }
+
+                console.log('データ取得成功:', response.result.values.length + '行');
+                
+                const processedData = processData(response.result.values);
+                const users = Object.keys(processedData).sort();
+                
+                if (users.length === 0) {
+                    throw new Error('ユーザーデータが見つかりません');
+                }
+
+                setupUserSelect(users, processedData);
+
+            } catch (error) {
+                console.error('アプリケーションエラー:', error);
+                const errorElement = document.getElementById('error-message');
+                if (errorElement) {
+                    errorElement.textContent = `エラー: ${error.message}`;
+                    errorElement.style.display = 'block';
+                }
+            }
+        }
+
+        // DOMContentLoadedイベントで起動
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('アプリケーション起動開始');
+            startApp().catch(error => {
+                console.error('起動エラー:', error);
+                document.getElementById('error-message').textContent = 
+                    `アプリケーションの起動に失敗しました: ${error.message}`;
+                document.getElementById('error-message').style.display = 'block';
+            });
+        });
     </script>
 </body>
 </html>
