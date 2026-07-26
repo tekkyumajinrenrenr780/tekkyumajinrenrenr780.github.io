@@ -1,6 +1,6 @@
-const CACHE_NAME = "poker-decision-lab-v2";
+const CACHE_NAME = "poker-decision-lab-v3";
 const APP_SHELL = [
-  "./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest",
+  "./", "./index.html", "./styles.css", "./sticky-table.css", "./app.js", "./manifest.webmanifest",
   "./icon.svg"
 ];
 
@@ -16,11 +16,48 @@ self.addEventListener("activate", event => {
   );
 });
 
+async function getResponse(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+    }
+    return response;
+  } catch {
+    return caches.match(request);
+  }
+}
+
+async function mergedStyles(request) {
+  const [base, sticky] = await Promise.all([
+    getResponse(request),
+    getResponse(new Request(new URL("./sticky-table.css", self.location.href)))
+  ]);
+
+  if (!base && !sticky) return Response.error();
+  const baseText = base ? await base.text() : "";
+  const stickyText = sticky ? await sticky.text() : "";
+
+  return new Response(`${baseText}\n${stickyText}`, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/css; charset=utf-8",
+      "Cache-Control": "no-cache"
+    }
+  });
+}
+
 self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname.includes("/api/")) return;
+
+  if (url.pathname.endsWith("/styles.css")) {
+    event.respondWith(mergedStyles(request));
+    return;
+  }
 
   if (request.mode === "navigate") {
     event.respondWith(
