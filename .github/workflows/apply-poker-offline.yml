@@ -1,0 +1,120 @@
+name: Apply Poker Offline Coach
+
+on:
+  push:
+    paths:
+      - "poker-decision-lab/offline-coach.js"
+      - ".github/workflows/apply-poker-offline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch app for offline analysis
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("poker-decision-lab")
+          index = root / "index.html"
+          html = index.read_text(encoding="utf-8")
+
+          html = html.replace(
+              '<span id="apiStatus" class="status-pill">ローカル分析</span>',
+              '<span id="apiStatus" class="status-pill">完全オフライン</span>'
+          )
+          html = html.replace("AIコーチに深掘りさせる", "保存済み解説を詳しく表示")
+          html = html.replace("LLMで詳細分析", "保存済みパターンで詳細分析")
+          html = html.replace(
+              "ゲーム履歴を入力すると、ローカルルールと任意のLLMコーチで分析します。",
+              "入力内容を保存済みのポーカー判断パターンと照合し、端末内だけで分析します。"
+          )
+          html = html.replace("<h3>LLMコーチ</h3>", "<h3>保存済み分析コーチ</h3>")
+          html = html.replace(
+              "server.pyを起動し、環境変数OPENAI_API_KEYを設定すると利用できます。キーはブラウザに保存しません。",
+              "APIキーや従量課金は使用しません。出題別解説と一般的な判断ルールを端末内で照合します。"
+          )
+
+          offline_script = '  <script src="offline-coach.js?v=6"></script>'
+          if offline_script not in html:
+              html = html.replace(
+                  '  <script src="app.js?v=4"></script>',
+                  '  <script src="app.js?v=4"></script>\n' + offline_script
+              )
+          index.write_text(html, encoding="utf-8")
+
+          sw = root / "service-worker.js"
+          sw.write_text('''const CACHE_NAME = "poker-decision-lab-v6-offline";
+          const APP_SHELL = [
+            "./",
+            "./index.html",
+            "./styles.css?v=4",
+            "./sticky-table.css?v=4",
+            "./app.js?v=4",
+            "./offline-coach.js?v=6",
+            "./manifest.webmanifest",
+            "./icon.svg"
+          ];
+
+          self.addEventListener("install", event => {
+            event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+          });
+
+          self.addEventListener("activate", event => {
+            event.waitUntil(
+              caches.keys()
+                .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+                .then(() => self.clients.claim())
+            );
+          });
+
+          self.addEventListener("fetch", event => {
+            const request = event.request;
+            if (request.method !== "GET") return;
+            const url = new URL(request.url);
+            if (url.origin !== self.location.origin) return;
+
+            if (request.mode === "navigate") {
+              event.respondWith(
+                fetch(request, {cache: "no-store"})
+                  .then(response => {
+                    const copy = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
+                    return response;
+                  })
+                  .catch(() => caches.match("./index.html"))
+              );
+              return;
+            }
+
+            event.respondWith(
+              caches.match(request).then(cached => cached || fetch(request).then(response => {
+                if (response.ok) {
+                  const copy = response.clone();
+                  caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+                }
+                return response;
+              }))
+            );
+          });
+          ''', encoding="utf-8")
+
+      - name: Commit generated patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add poker-decision-lab/index.html poker-decision-lab/service-worker.js
+          if git diff --cached --quiet; then
+            echo "No changes required"
+          else
+            git commit -m "Switch Poker Decision Lab to offline analysis"
+            git push
+          fi
