@@ -82,7 +82,10 @@
   function latestHeroAction() {
     const items = Array.from(document.querySelectorAll('#actionHistory li')).filter(li => !li.classList.contains('empty-history'));
     if (!items.length) return '';
-    const firstLine = (items.at(-1).textContent || '').split('\n')[0].trim();
+    const item = items.at(-1);
+    const copy = item.cloneNode(true);
+    copy.querySelectorAll('span').forEach(node => node.remove());
+    const firstLine = (copy.textContent || '').trim();
     return firstLine.replace(/^(プリフロップ|フロップ|ターン|リバー)\s*[：:]/, '').trim();
   }
 
@@ -127,19 +130,32 @@
   addLegend();
   updateTableClarity();
 
-  const observer = new MutationObserver(() => requestAnimationFrame(updateTableClarity));
+  let framePending = false;
+  const scheduleUpdate = () => {
+    if (framePending) return;
+    framePending = true;
+    requestAnimationFrame(() => {
+      framePending = false;
+      updateTableClarity();
+    });
+  };
+
+  const contentObserver = new MutationObserver(scheduleUpdate);
   [
-    table,
     $('factVillain'),
     $('tableAction'),
     $('toCall'),
     $('actionHistory'),
     $('selectionNotice'),
     $('holeCards')
-  ].filter(Boolean).forEach(node => observer.observe(node, {
+  ].filter(Boolean).forEach(node => contentObserver.observe(node, {
     subtree: true,
     childList: true,
-    characterData: true,
+    characterData: true
+  }));
+
+  const seatObserver = new MutationObserver(scheduleUpdate);
+  document.querySelectorAll('.seat').forEach(seat => seatObserver.observe(seat, {
     attributes: true,
     attributeFilter: ['class']
   }));
