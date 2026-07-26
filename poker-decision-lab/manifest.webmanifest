@@ -1,0 +1,25 @@
+{
+  "id": "./",
+  "name": "Poker Decision Lab",
+  "short_name": "Poker Lab",
+  "description": "ゲーム形式でポーカーの意思決定を学習し、弱点を分析するAIコーチ",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07110e",
+  "theme_color": "#07110e",
+  "categories": [
+    "education",
+    "games"
+  ],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
