@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Poker Decision Lab">
+  <rect width="512" height="512" rx="104" fill="#07110e"/>
+  <rect x="42" y="42" width="428" height="428" rx="92" fill="#123b2d" stroke="#39c88a" stroke-width="10"/>
+  <g transform="rotate(-8 210 245)">
+    <rect x="116" y="111" width="184" height="258" rx="24" fill="#f2f7f4"/>
+    <path d="M190 195c-24 28-51 42-51 75 0 27 20 45 45 45 14 0 25-5 34-16-1 20-8 35-21 49h54c-13-14-20-29-21-49 9 11 20 16 34 16 25 0 45-18 45-45 0-33-27-47-51-75l-34-43z" fill="#0a1c16"/>
+  </g>
+  <g transform="rotate(8 315 273)">
+    <rect x="216" y="143" width="184" height="258" rx="24" fill="#f2f7f4" stroke="#0a1c16" stroke-width="5"/>
+    <path d="M309 246c-32-44-86-15-77 29 7 35 45 58 77 91 32-33 70-56 77-91 9-44-45-73-77-29z" fill="#c8403b"/>
+  </g>
+</svg>
