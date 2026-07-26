@@ -51,7 +51,7 @@
       <h1>Poker Decision Lab</h1>
     </div>
     <div class="topbar-actions">
-      <span id="apiStatus" class="status-pill">ローカル分析</span>
+      <span id="apiStatus" class="status-pill">完全オフライン</span>
       <button id="installAppTop" class="button secondary install-top-button" type="button">iPhoneに追加</button>
       <button id="newHandTop" class="button primary">次のハンド</button>
     </div>
@@ -180,7 +180,7 @@
             </div>
 
             <div class="feedback-actions">
-              <button id="askAiCurrent" class="button secondary">AIコーチに深掘りさせる</button>
+              <button id="askAiCurrent" class="button secondary">保存済み解説を詳しく表示</button>
               <button id="nextHand" class="button primary">次のハンド</button>
             </div>
             <div id="aiCurrentResponse" class="ai-response hidden"></div>
@@ -195,7 +195,7 @@
           <div class="eyebrow">HAND REVIEW</div>
           <h2>実戦ハンドを振り返る</h2>
         </div>
-        <p>ゲーム履歴を入力すると、ローカルルールと任意のLLMコーチで分析します。</p>
+        <p>入力内容を保存済みのポーカー判断パターンと照合し、端末内だけで分析します。</p>
       </div>
 
       <div class="review-grid">
@@ -261,7 +261,7 @@
 
           <div class="button-row">
             <button id="runLocalReview" class="button primary">ローカル分析</button>
-            <button id="runAiReview" class="button secondary">LLMで詳細分析</button>
+            <button id="runAiReview" class="button secondary">保存済みパターンで詳細分析</button>
           </div>
         </section>
 
@@ -377,8 +377,8 @@
         </section>
 
         <section class="settings-card">
-          <h3>LLMコーチ</h3>
-          <p class="small">server.pyを起動し、環境変数OPENAI_API_KEYを設定すると利用できます。キーはブラウザに保存しません。</p>
+          <h3>保存済み分析コーチ</h3>
+          <p class="small">APIキーや従量課金は使用しません。出題別解説と一般的な判断ルールを端末内で照合します。</p>
           <label>
             回答スタイル
             <select id="coachStyle">
@@ -402,5 +402,6 @@
   </footer>
 
   <script src="app.js?v=4"></script>
+  <script src="offline-coach.js?v=6"></script>
 </body>
 </html>

@@ -1,20 +1,17 @@
-const CACHE_NAME = "poker-decision-lab-v4";
+const CACHE_NAME = "poker-decision-lab-v6-offline";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css?v=4",
   "./sticky-table.css?v=4",
   "./app.js?v=4",
+  "./offline-coach.js?v=6",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", event => {
@@ -28,13 +25,12 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET") return;
-
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin || url.pathname.includes("/api/")) return;
+  if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request, { cache: "no-store" })
+      fetch(request, {cache: "no-store"})
         .then(response => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
@@ -46,14 +42,12 @@ self.addEventListener("fetch", event => {
   }
 
   event.respondWith(
-    fetch(request)
-      .then(response => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        }
-        return response;
-      })
-      .catch(() => caches.match(request))
+    caches.match(request).then(cached => cached || fetch(request).then(response => {
+      if (response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+      }
+      return response;
+    }))
   );
 });
