@@ -1,0 +1,67 @@
+/* v13: keep bet amounts visible while making the action itself unmistakable. */
+.action-ticker-v12 {
+  min-height: 44px;
+  gap: 8px;
+  padding: 7px 11px;
+  border-width: 2px;
+}
+
+.action-ticker-v12 .ticker-player {
+  min-width: 44px;
+  font-size: 12px;
+}
+
+.action-ticker-v12 strong {
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: .02em;
+}
+
+.action-ticker-v12 .ticker-amount {
+  min-width: 58px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.seat-action-bubble .action-name {
+  font-size: 11px !important;
+  font-weight: 950;
+}
+
+.seat-action-bubble .action-amount {
+  font-size: 13px !important;
+  font-weight: 950;
+}
+
+.selection-notice .auto-progress-note {
+  display: block;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width:720px) {
+  .action-ticker-v12 {
+    min-height: 40px;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+  .action-ticker-v12 .ticker-player {
+    min-width: 36px;
+    font-size: 10px;
+  }
+  .action-ticker-v12 strong {
+    font-size: 12px;
+  }
+  .action-ticker-v12 .ticker-amount {
+    min-width: 48px;
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+}
