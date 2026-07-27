@@ -1,4 +1,4 @@
-const CACHE_NAME = 'poker-decision-lab-startup-recovery-v11';
+const CACHE_NAME = 'poker-decision-lab-layout-separation-v12';
 const APP_SHELL = [
   './',
   './index.html',
