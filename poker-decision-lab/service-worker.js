@@ -1,16 +1,16 @@
-const CACHE_NAME = 'poker-decision-lab-player-actions-v10';
+const CACHE_NAME = 'poker-decision-lab-startup-recovery-v11';
 const APP_SHELL = [
   './',
   './index.html',
-  './sequence-app.css?v=8',
-  './table-clarity.css?v=9',
-  './player-actions-v10.css?v=10',
-  './sequence-utils.js?v=8',
-  './sequence-hands-1.js?v=8',
-  './sequence-hands-2.js?v=8',
-  './sequence-hands-3.js?v=8',
-  './sequence-app.js?v=10',
-  './player-actions-v10.js?v=10',
+  './sequence-app.css?v=11',
+  './table-clarity.css?v=11',
+  './player-actions-v10.css?v=11',
+  './sequence-utils.js?v=11',
+  './sequence-hands-1.js?v=11',
+  './sequence-hands-2.js?v=11',
+  './sequence-hands-3.js?v=11',
+  './sequence-app-safe-v11.js?v=11',
+  './player-actions-v10.js?v=11',
   './manifest.webmanifest',
   './icon.svg'
 ];
@@ -46,6 +46,6 @@ self.addEventListener('fetch', event => {
         }
         return response;
       })
-      .catch(() => caches.match(request).then(response => response || caches.match('./index.html')))
+      .catch(() => caches.match(request).then(cached => cached || caches.match('./index.html')))
   );
 });
