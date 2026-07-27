@@ -1,4 +1,4 @@
-const CACHE_NAME = 'poker-decision-lab-auto-progress-v13';
+const CACHE_NAME = 'poker-decision-lab-hand-routing-v14';
 const APP_SHELL = [
   './',
   './index.html',
