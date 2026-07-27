@@ -1,18 +1,19 @@
-const CACHE_NAME = 'poker-decision-lab-hand-routing-v14';
+const CACHE_NAME = 'poker-decision-lab-random-manual-flow-v15';
 const APP_SHELL = [
   './',
   './index.html',
-  './sequence-app.css?v=11',
-  './table-clarity.css?v=11',
-  './player-actions-v10.css?v=11',
-  './action-clarity-v13.css?v=13',
-  './sequence-utils.js?v=11',
-  './sequence-hands-1.js?v=11',
-  './sequence-hands-2.js?v=11',
-  './sequence-hands-3.js?v=11',
-  './sequence-app-safe-v11.js?v=11',
-  './player-actions-v10.js?v=11',
-  './progress-fix-v13.js?v=13',
+  './sequence-app.css?v=15',
+  './table-clarity.css?v=15',
+  './player-actions-v10.css?v=15',
+  './action-clarity-v13.css?v=15',
+  './sequence-utils.js?v=15',
+  './sequence-hands-1.js?v=15',
+  './sequence-hands-2.js?v=15',
+  './sequence-hands-3.js?v=15',
+  './hand-router-v15.js?v=15',
+  './sequence-app-safe-v11.js?v=15',
+  './player-actions-v10.js?v=15',
+  './manual-flow-v15.js?v=15',
   './manifest.webmanifest',
   './icon.svg'
 ];
