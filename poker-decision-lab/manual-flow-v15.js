@@ -51,25 +51,29 @@
       : gamePool;
 
     var pools = [preferredPool, gamePool, library];
+    var fallback = null;
+
     for (var i = 0; i < pools.length; i += 1) {
       var pool = uniqueHands(pools[i]).filter(function (hand) { return hand.id !== currentId; });
       if (!pool.length) continue;
+      if (!fallback) fallback = pool;
+
+      var otherPositionPool = currentPosition
+        ? pool.filter(function (hand) { return hand.hero !== currentPosition; })
+        : pool;
+      if (!otherPositionPool.length) continue;
 
       var positions = POSITIONS.filter(function (position) {
-        return pool.some(function (hand) { return hand.hero === position; });
+        return otherPositionPool.some(function (hand) { return hand.hero === position; });
       });
-      if (positions.length > 1 && currentPosition) {
-        var otherPositions = positions.filter(function (position) { return position !== currentPosition; });
-        if (otherPositions.length) positions = otherPositions;
-      }
-
       var selectedPosition = positions.length ? randomItem(positions) : null;
       var positionPool = selectedPosition
-        ? pool.filter(function (hand) { return hand.hero === selectedPosition; })
-        : pool;
+        ? otherPositionPool.filter(function (hand) { return hand.hero === selectedPosition; })
+        : otherPositionPool;
       if (positionPool.length) return randomItem(positionPool);
     }
-    return null;
+
+    return fallback && fallback.length ? randomItem(fallback) : null;
   }
 
   function navigateToHand(hand, button) {
@@ -116,7 +120,9 @@
     setTimeout(markManualFlow, 0);
   });
 
-  var observer = new MutationObserver(markManualFlow);
-  var selectionNotice = document.getElementById('selectionNotice');
-  if (selectionNotice) observer.observe(selectionNotice, {subtree:true, childList:true, attributes:true, attributeFilter:['class']});
+  if (window.MutationObserver) {
+    var observer = new MutationObserver(markManualFlow);
+    var selectionNotice = document.getElementById('selectionNotice');
+    if (selectionNotice) observer.observe(selectionNotice, {subtree:true, childList:true, attributes:true, attributeFilter:['class']});
+  }
 }());
