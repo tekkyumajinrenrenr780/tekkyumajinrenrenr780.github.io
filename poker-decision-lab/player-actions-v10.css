@@ -1,0 +1,173 @@
+/* v10: distinct CHECK/CALL states and sequential animation for every player's action. */
+.poker-table { isolation:isolate; }
+
+.seat {
+  --action-color: var(--warn);
+  transition: opacity .22s ease, filter .22s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.seat.action-active {
+  z-index: 18;
+  border-color: var(--action-color) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--action-color) 28%, transparent), 0 12px 30px rgba(0,0,0,.5) !important;
+  animation: player-action-pulse .68s cubic-bezier(.2,.8,.2,1);
+}
+.seat.folded:not(.hero) { opacity:.45; filter:saturate(.35); }
+.seat.action-fold { --action-color:#788982; }
+.seat.action-check { --action-color:#74a9ff; }
+.seat.action-call { --action-color:#45d6b0; }
+.seat.action-bet,
+.seat.action-open { --action-color:#f4c760; }
+.seat.action-raise,
+.seat.action-3-bet,
+.seat.action-4-bet,
+.seat.action-check-raise { --action-color:#ff9a62; }
+.seat.action-all-in { --action-color:#ff746b; }
+.seat.action-limp { --action-color:#b99cff; }
+
+.seat-action-bubble {
+  grid-template-columns:auto 1fr;
+  align-items:center;
+  column-gap:6px;
+  min-width:104px;
+  border-width:2px;
+  border-color:var(--action-color, var(--line2));
+}
+.seat-action-bubble.visible { display:grid; }
+.seat-action-bubble .action-icon {
+  grid-row:1 / span 2;
+  display:grid;
+  place-items:center;
+  width:25px;
+  height:25px;
+  border-radius:50%;
+  background:var(--action-color, var(--warn));
+  color:#06120d;
+  font-size:14px;
+  font-weight:950;
+}
+.seat-action-bubble .action-name {
+  color:var(--action-color, var(--warn)) !important;
+  text-align:left;
+  font-size:12px;
+}
+.seat-action-bubble .action-amount {
+  margin:0;
+  text-align:left;
+  font-size:14px;
+}
+.seat-action-bubble.action-fold { --action-color:#788982; }
+.seat-action-bubble.action-check { --action-color:#74a9ff; }
+.seat-action-bubble.action-call { --action-color:#45d6b0; }
+.seat-action-bubble.action-bet,
+.seat-action-bubble.action-open { --action-color:#f4c760; }
+.seat-action-bubble.action-raise,
+.seat-action-bubble.action-3-bet,
+.seat-action-bubble.action-4-bet,
+.seat-action-bubble.action-check-raise { --action-color:#ff9a62; }
+.seat-action-bubble.action-all-in { --action-color:#ff746b; }
+.seat-action-bubble.action-limp { --action-color:#b99cff; }
+
+.action-announcer {
+  position:absolute;
+  z-index:25;
+  left:50%;
+  top:9%;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-width:130px;
+  padding:6px 10px;
+  border:2px solid var(--action-color, var(--warn));
+  border-radius:999px;
+  background:rgba(4,13,10,.94);
+  box-shadow:0 10px 26px rgba(0,0,0,.45);
+  opacity:0;
+  transform:translate(-50%,-7px) scale(.94);
+  pointer-events:none;
+}
+.action-announcer.visible {
+  opacity:1;
+  transform:translate(-50%,0) scale(1);
+  animation:action-announcer-in .65s ease both;
+}
+.action-announcer strong { color:var(--text); font-size:11px; }
+.action-announcer span { color:var(--action-color, var(--warn)); font-size:12px; font-weight:950; }
+.action-announcer.action-fold { --action-color:#788982; }
+.action-announcer.action-check { --action-color:#74a9ff; }
+.action-announcer.action-call { --action-color:#45d6b0; }
+.action-announcer.action-bet,
+.action-announcer.action-open { --action-color:#f4c760; }
+.action-announcer.action-raise,
+.action-announcer.action-3-bet,
+.action-announcer.action-4-bet,
+.action-announcer.action-check-raise { --action-color:#ff9a62; }
+.action-announcer.action-all-in { --action-color:#ff746b; }
+.action-announcer.action-limp { --action-color:#b99cff; }
+
+.moving-chip {
+  position:absolute;
+  z-index:16;
+  display:grid;
+  place-items:center;
+  min-width:38px;
+  height:24px;
+  padding:0 7px;
+  border:2px solid rgba(255,255,255,.55);
+  border-radius:999px;
+  background:var(--action-color, var(--warn));
+  color:#06120d;
+  box-shadow:0 7px 16px rgba(0,0,0,.42);
+  font-size:9px;
+  font-weight:950;
+  pointer-events:none;
+}
+.moving-chip.action-call { --action-color:#45d6b0; }
+.moving-chip.action-bet,
+.moving-chip.action-open { --action-color:#f4c760; }
+.moving-chip.action-raise,
+.moving-chip.action-3-bet,
+.moving-chip.action-4-bet,
+.moving-chip.action-check-raise { --action-color:#ff9a62; }
+.moving-chip.action-all-in { --action-color:#ff746b; }
+.moving-chip.action-limp { --action-color:#b99cff; }
+
+.table-clarity-legend { flex-wrap:wrap; }
+
+@keyframes player-action-pulse {
+  0% { transform:scale(1); }
+  28% { transform:scale(1.14); }
+  60% { transform:scale(1.05); }
+  100% { transform:scale(1); }
+}
+@keyframes action-announcer-in {
+  0% { opacity:0; transform:translate(-50%,-7px) scale(.94); }
+  20%,72% { opacity:1; transform:translate(-50%,0) scale(1); }
+  100% { opacity:0; transform:translate(-50%,4px) scale(.98); }
+}
+
+@media (max-width:720px) {
+  .seat-action-bubble {
+    min-width:72px;
+    max-width:94px;
+    grid-template-columns:18px 1fr;
+    column-gap:4px;
+    padding:4px 5px;
+  }
+  .seat-action-bubble .action-icon {
+    width:18px;
+    height:18px;
+    font-size:10px;
+  }
+  .seat-action-bubble .action-name { font-size:8px; }
+  .seat-action-bubble .action-amount { font-size:10px; }
+  .action-announcer { top:5%; min-width:100px; padding:4px 8px; }
+  .action-announcer strong { font-size:9px; }
+  .action-announcer span { font-size:10px; }
+  .moving-chip { min-width:30px; height:19px; padding:0 5px; font-size:7px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .seat.action-active,
+  .action-announcer.visible { animation:none; }
+  .seat { transition:none; }
+}
