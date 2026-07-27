@@ -1,15 +1,16 @@
-const CACHE_NAME = 'poker-decision-lab-table-clarity-v9';
+const CACHE_NAME = 'poker-decision-lab-player-actions-v10';
 const APP_SHELL = [
   './',
   './index.html',
   './sequence-app.css?v=8',
   './table-clarity.css?v=9',
+  './player-actions-v10.css?v=10',
   './sequence-utils.js?v=8',
   './sequence-hands-1.js?v=8',
   './sequence-hands-2.js?v=8',
   './sequence-hands-3.js?v=8',
-  './sequence-app.js?v=8',
-  './table-clarity.js?v=9',
+  './sequence-app.js?v=10',
+  './player-actions-v10.js?v=10',
   './manifest.webmanifest',
   './icon.svg'
 ];
@@ -37,7 +38,7 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    fetch(request, { cache: 'no-store' })
+    fetch(request, {cache:'no-store'})
       .then(response => {
         if (response.ok) {
           const copy = response.clone();
