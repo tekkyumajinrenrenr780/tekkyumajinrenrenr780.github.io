@@ -8,3 +8,14 @@ window.POKER_HANDS = [...(window.POKER_HANDS || []),
         {street:'river',board:['J♣','7♦','3♠','8♦','2♣'],pot:23.8,toCall:0,stack:9.1,villainAction:'BBチェック',situation:'ドローが外れたブランクリバー。残りは約38%ポットです。',prompt:'リバーは？',after:'ハンド終了。',choices:[window.pcChoice('check','チェックバック',58,false,'ショーダウンできますが、Jxからの明確なバリューを逃します。'),window.pcChoice('small','3BBベット',72,false,'コールは得やすいですが、残りスタックを活用し切れていません。'),window.pcChoice('jam','9.1BBオールイン',100,false,'SPR設計どおり、弱いJxや2ペア候補へ最大バリューを取れます。'),window.pcChoice('over','20BB相当ベット',0,false,'実際のスタックを超える選択です。')],best:'jam'}
       ],overall:'20BBの小さいオープンから低SPRを作り、フロップは小さく、ターンでサイズを上げ、リバーに自然なオールインを残すスタック設計です。'}
 ];
+
+/* v14: preserve the complete library, then honor an explicitly requested hand. */
+window.POKER_ALL_HANDS_V14 = Array.isArray(window.POKER_HANDS) ? window.POKER_HANDS.slice() : [];
+(function () {
+  try {
+    var requestedId = new URLSearchParams(window.location.search).get('hand');
+    if (!requestedId) return;
+    var selected = window.POKER_ALL_HANDS_V14.find(function (hand) { return hand.id === requestedId; });
+    if (selected) window.POKER_HANDS = [selected];
+  } catch (error) {}
+}());
