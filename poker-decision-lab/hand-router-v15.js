@@ -36,12 +36,14 @@
     return list[Math.floor(Math.random() * list.length)];
   }
 
-  function chooseFromPool(pool, requestedId) {
+  function availablePositions(pool) {
+    return POSITIONS.filter(function (position) {
+      return pool.some(function (hand) { return hand.hero === position; });
+    });
+  }
+
+  function chooseFromPool(pool) {
     if (!pool.length) return null;
-    if (requestedId) {
-      var requested = pool.find(function (hand) { return hand.id === requestedId; });
-      if (requested) return requested;
-    }
 
     var grouped = {};
     pool.forEach(function (hand) {
@@ -49,9 +51,7 @@
       grouped[hand.hero].push(hand);
     });
 
-    var positions = POSITIONS.filter(function (position) {
-      return grouped[position] && grouped[position].length;
-    });
+    var positions = availablePositions(pool);
     if (!positions.length) return randomItem(pool);
 
     try {
@@ -74,16 +74,22 @@
   var requestedId = '';
   try { requestedId = new URLSearchParams(window.location.search).get('hand') || ''; } catch (error) {}
 
+  var requested = requestedId
+    ? library.find(function (hand) { return hand.id === requestedId; })
+    : null;
+
   var settings = readSettings();
   var gamePool = library.filter(function (hand) { return gameEnabled(hand, settings); });
   var preferredPool = settings.difficulty && settings.difficulty !== 'all'
     ? gamePool.filter(function (hand) { return hand.difficulty === settings.difficulty; })
     : gamePool;
 
-  var selected = chooseFromPool(preferredPool, requestedId)
-    || chooseFromPool(gamePool, requestedId)
-    || chooseFromPool(library, requestedId);
+  var pools = [preferredPool, gamePool, library].filter(function (pool) { return pool.length; });
+  var randomPool = pools.find(function (pool) { return availablePositions(pool).length > 1; })
+    || pools[0]
+    || [];
 
+  var selected = requested || chooseFromPool(randomPool);
   if (selected) {
     window.POKER_HANDS = [selected];
     window.POKER_SELECTED_HAND_V15 = selected;
