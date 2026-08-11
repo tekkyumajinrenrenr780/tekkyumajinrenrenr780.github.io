@@ -1,0 +1,45 @@
+name: Fix Tokyo trip itinerary
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-tokyo-trip.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix itinerary without changing design
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('tokyo-trip-2026/index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old_812_first = '<div class="row"><div class="time">日中</div><div class="plan">原宿から渋谷</div><div class="point">竹下通り、表参道、渋谷。</div></div>'
+          new_812_first = '<div class="row"><div class="time">9:30〜10:30</div><div class="plan">東京都庁 展望室</div><div class="point">無料の展望室を見学。悪天候などで休室の場合は原宿へ直行。<div class="actions"><a class="btn primary" href="https://www.zaimu.metro.tokyo.lg.jp/tochousha/goannai/tenbou" target="_blank" rel="noopener">都庁展望室 公式</a><a class="btn" href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E5%BA%81" target="_blank" rel="noopener">Googleマップ</a></div></div></div><div class="row"><div class="time">11:30〜</div><div class="plan">原宿 → 表参道 → 渋谷</div><div class="point">竹下通り、表参道、渋谷を一方向で移動。</div></div>'
+          if old_812_first not in s:
+              raise SystemExit('8/12 first row not found')
+          s = s.replace(old_812_first, new_812_first, 1)
+
+          old_ship_812 = '<div class="row"><div class="time">夜</div><div class="plan">大型荷物を発送</div><div class="point">最終日の車載と新幹線移動を軽くする。</div></div>'
+          if old_ship_812 in s:
+              s = s.replace(old_ship_812, '', 1)
+
+          old_813_first = '<div class="row"><div class="time">午前</div><div class="plan">スカイツリー・ソラマチ</div><div class="point"><a class="btn primary" href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E3%82%B9%E3%82%AB%E3%82%A4%E3%83%84%E3%83%AA%E3%83%BC" target="_blank" rel="noopener">Googleマップ</a></div></div>'
+          new_813_first = '<div class="row"><div class="time">朝・出発前</div><div class="plan">八戸組の大型荷物を発送</div><div class="point"><b>ヤマト運輸 亀有営業所（白鳥）</b><br>東京都葛飾区白鳥4-17-27<br>大型荷物を発送してから宿を出発。<div class="actions"><a class="btn primary" href="https://www.google.com/maps/search/?api=1&amp;query=%E3%83%A4%E3%83%9E%E3%83%88%E9%81%8B%E8%BC%B8%20%E4%BA%80%E6%9C%89%E5%96%B6%E6%A5%AD%E6%89%80%20%E7%99%BD%E9%B3%A5" target="_blank" rel="noopener">ヤマトへ案内</a></div></div></div><div class="row"><div class="time">午前</div><div class="plan">スカイツリー・ソラマチ</div><div class="point"><a class="btn primary" href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E3%82%B9%E3%82%AB%E3%82%A4%E3%83%84%E3%83%AA%E3%83%BC" target="_blank" rel="noopener">Googleマップ</a></div></div>'
+          if old_813_first not in s:
+              raise SystemExit('8/13 first row not found')
+          s = s.replace(old_813_first, new_813_first, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit fix and remove temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tokyo-trip-2026/index.html
+          git rm .github/workflows/fix-tokyo-trip.yml
+          git commit -m 'Restore Tokyo trip design and update Aug 12-13 plans'
+          git push
