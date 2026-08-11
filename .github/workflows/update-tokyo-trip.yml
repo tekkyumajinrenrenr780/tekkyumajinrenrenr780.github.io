@@ -1,0 +1,34 @@
+name: Update Tokyo trip parking
+on:
+  push:
+    paths:
+      - '.github/workflows/update-tokyo-trip.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update itinerary
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('tokyo-trip-2026/index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('アルファード＋エスティマ', 'アルファード＋セレナ')
+          old = '<div class="row"><div class="time">15:00〜17:00</div><div class="plan">teamLab Planets</div><div class="point">着替えと小型タオルを用意。<div class="actions"><a class="btn primary" href="https://teamlabplanets.dmm.com/" target="_blank" rel="noopener">公式サイト</a></div></div></div>'
+          new = '<div class="row"><div class="time">15:00〜17:00</div><div class="plan">teamLab Planets</div><div class="point">着替えと小型タオルを用意。<div class="actions"><a class="btn primary" href="https://teamlabplanets.dmm.com/" target="_blank" rel="noopener">公式サイト</a></div></div></div><div class="row"><div class="time">移動</div><div class="plan">車2台・ららぽーと豊洲</div><div class="point">アルファード＋セレナの2台で移動。駐車はアーバンドック ららぽーと豊洲駐車場を利用。駐車後、teamLab Planetsまで徒歩で移動。帰りは夕方に葛飾へ戻る。</div></div>'
+          if old not in s:
+              raise SystemExit('target teamLab row not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit and remove temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tokyo-trip-2026/index.html
+          git rm .github/workflows/update-tokyo-trip.yml
+          git commit -m 'Update Tokyo trip teamLab parking plan'
+          git push
